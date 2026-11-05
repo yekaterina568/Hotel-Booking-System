@@ -1,0 +1,58 @@
+package com.hotelbooking.booking.service;
+
+import com.hotelbooking.booking.db.BookingEntity;
+import com.hotelbooking.booking.db.BookingRepository;
+import com.hotelbooking.booking.model.BookingState;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.math.BigInteger;
+
+@Service
+public class BookingService {
+
+    private final BookingRepository bookingRepository;
+
+    public BookingService(BookingRepository bookingRepository) {
+        this.bookingRepository = bookingRepository;
+    }
+
+    public List<BookingEntity> findAll() {
+        return bookingRepository.findAll();
+    }
+
+    public BookingEntity findById(BigInteger id) {
+        return bookingRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Booking not found: " + id));
+    }
+
+    public BookingEntity create(BookingEntity booking) {
+        booking.setState(BookingState.CONFIRMED);
+        booking.setCreatedAt(OffsetDateTime.now());
+        return bookingRepository.save(booking);
+    }
+
+    public BookingEntity checkIn(BigInteger id) {
+        BookingEntity booking = findById(id);
+        if (booking.getState() != BookingState.CONFIRMED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Заселить можно только подтверждённую бронь");
+        }
+        booking.setState(BookingState.CHECKEDIN);
+        return bookingRepository.save(booking);
+    }
+
+    public BookingEntity cancel(BigInteger id) {
+        BookingEntity booking = findById(id);
+        if (booking.getState() != BookingState.CONFIRMED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Отменить можно только подтверждённую бронь");
+        }
+        booking.setState(BookingState.CANCELLED);
+        return bookingRepository.save(booking);
+    }
+}

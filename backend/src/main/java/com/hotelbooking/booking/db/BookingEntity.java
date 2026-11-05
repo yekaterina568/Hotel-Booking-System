@@ -6,6 +6,8 @@ import com.hotelbooking.room.db.RoomEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+
+import java.math.BigInteger;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -14,7 +16,7 @@ public class BookingEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "booking_id")
-    Long bookingId;
+    BigInteger bookingId;
 
     @ManyToOne
     @JoinColumn(name = "guest_id")
@@ -34,4 +36,22 @@ public class BookingEntity {
 
     @Column(name = "created_at")
     OffsetDateTime createdAt;
+
+    public BigInteger getBookingId() { return bookingId; }
+    public void setBookingId(BigInteger bookingId) { this.bookingId = bookingId; }  
+
+    public GuestEntity getGuest() { return guest; }
+    public void setGuest(GuestEntity guest) { this.guest = guest; }
+
+    public RoomEntity getRoom() { return room; }
+    public void setRoom(RoomEntity room) { this.room = room; }
+
+    public OffsetDateTime getExpectedArrival() { return expectedArrival; }
+    public void setExpectedArrival(OffsetDateTime expectedArrival) { this.expectedArrival = expectedArrival; }
+
+    public BookingState getState() { return state; }
+    public void setState(BookingState state) { this.state = state; }
+
+    public OffsetDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
 }
