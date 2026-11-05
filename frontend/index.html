@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,57 +9,57 @@
 <body>
   <header>
     <h1>🏨 Hotel Booking System</h1>
-    <p>Front-Desk Check-in & Arrival Management</p>
+    <p>Front-Desk Room Check-in & Arrival Management</p>
   </header>
 
   <main class="container">
-    <!-- Секция Аружан: Front-Desk UI & Early Arrival Priority Queue -->
+    <!-- Aruzhan's Section: Front-Desk UI & Early Arrival Priority Queue -->
     <section class="card">
-      <h2>🛎️ Панель Рецепциониста</h2>
+      <h2>🛎️ Receptionist Dashboard (Aruzhan)</h2>
       
       <div class="search-box">
-        <h3>Проверка Паспорта и Заселение</h3>
+        <h3>Passport Validation & Check-in</h3>
         <div class="form-group">
-          <input type="text" id="passportInput" placeholder="Введите номер паспорта (напр. N12345678)" />
-          <button id="validateBtn">Проверить документ</button>
+          <input type="text" id="passportInput" placeholder="Enter passport number (e.g. N12345678)" />
+          <button id="validateBtn">Validate Document</button>
         </div>
         <p id="validationMsg" class="msg"></p>
       </div>
 
-      <h3>⚡ Очередь Приоритетного Заселения (Cleaned Rooms)</h3>
+      <h3>⚡ Early Arrival Priority Queue (Cleaned Rooms)</h3>
       <table id="queueTable">
         <thead>
           <tr>
             <th>Booking ID</th>
-            <th>ФИО Гостя</th>
-            <th>№ Номера</th>
-            <th>Ожидаемое прибытие</th>
-            <th>Статус Клининга</th>
-            <th>Действие</th>
+            <th>Guest Name</th>
+            <th>Room No.</th>
+            <th>Expected Arrival</th>
+            <th>Cleaning Status</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody id="queueTbody">
-          <!-- Заполняется из app.js -->
+          <!-- Populated from app.js -->
         </tbody>
       </table>
     </section>
 
-    <!-- Секция Аяна: Housekeeping UI & Status Management -->
+    <!-- Ayan's Section: Housekeeping UI & Status Management -->
     <section class="card">
-      <h2>🧹 Панель Службы Клининга</h2>
-      <p>Управление статусами комнат (3 статуса: Cleaned, Cleaning, Dirty)</p>
+      <h2>🧹 Housekeeping Dashboard (Ayan)</h2>
+      <p>Room Status Management (3 Statuses: Cleaned, Cleaning, Dirty)</p>
 
       <table id="roomsTable">
         <thead>
           <tr>
-            <th>№ Номера</th>
-            <th>Тип Номера</th>
-            <th>Текущий Статус</th>
-            <th>Сменить Статус</th>
+            <th>Room No.</th>
+            <th>Room Type</th>
+            <th>Current Status</th>
+            <th>Change Status</th>
           </tr>
         </thead>
         <tbody id="roomsTbody">
-          <!-- Заполняется из app.js -->
+          <!-- Populated from app.js -->
         </tbody>
       </table>
     </section>
