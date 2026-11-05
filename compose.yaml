@@ -11,6 +11,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./backend/database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
     healthcheck:
       interval: 5s
       timeout: 5s
