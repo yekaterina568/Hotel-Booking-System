@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hotel Booking System — Front-Desk & Housekeeping</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>🏨 Hotel Booking System</h1>
+    <p>Front-Desk Check-in & Arrival Management</p>
+  </header>
+
+  <main class="container">
+    <!-- Секция Аружан: Front-Desk UI & Early Arrival Priority Queue -->
+    <section class="card">
+      <h2>🛎️ Панель Рецепциониста</h2>
+      
+      <div class="search-box">
+        <h3>Проверка Паспорта и Заселение</h3>
+        <div class="form-group">
+          <input type="text" id="passportInput" placeholder="Введите номер паспорта (напр. N12345678)" />
+          <button id="validateBtn">Проверить документ</button>
+        </div>
+        <p id="validationMsg" class="msg"></p>
+      </div>
+
+      <h3>⚡ Очередь Приоритетного Заселения (Cleaned Rooms)</h3>
+      <table id="queueTable">
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>ФИО Гостя</th>
+            <th>№ Номера</th>
+            <th>Ожидаемое прибытие</th>
+            <th>Статус Клининга</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+        <tbody id="queueTbody">
+          <!-- Заполняется из app.js -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Секция Аяна: Housekeeping UI & Status Management -->
+    <section class="card">
+      <h2>🧹 Панель Службы Клининга</h2>
+      <p>Управление статусами комнат (3 статуса: Cleaned, Cleaning, Dirty)</p>
+
+      <table id="roomsTable">
+        <thead>
+          <tr>
+            <th>№ Номера</th>
+            <th>Тип Номера</th>
+            <th>Текущий Статус</th>
+            <th>Сменить Статус</th>
+          </tr>
+        </thead>
+        <tbody id="roomsTbody">
+          <!-- Заполняется из app.js -->
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
