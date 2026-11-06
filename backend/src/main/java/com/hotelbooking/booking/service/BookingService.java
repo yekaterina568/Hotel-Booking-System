@@ -24,7 +24,7 @@ public class BookingService {
         return bookingRepository.findAll();
     }
 
-    public BookingEntity findById(BigInteger id) {
+    public BookingEntity findById(Long id) {
         return bookingRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Booking not found: " + id));
@@ -36,7 +36,7 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    public BookingEntity checkIn(BigInteger id) {
+    public BookingEntity checkIn(Long id) {
         BookingEntity booking = findById(id);
         if (booking.getState() != BookingState.CONFIRMED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -46,7 +46,7 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    public BookingEntity cancel(BigInteger id) {
+    public BookingEntity cancel(Long id) {
         BookingEntity booking = findById(id);
         if (booking.getState() != BookingState.CONFIRMED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,

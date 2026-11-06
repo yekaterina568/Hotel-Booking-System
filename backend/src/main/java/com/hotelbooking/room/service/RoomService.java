@@ -5,8 +5,6 @@ import com.hotelbooking.room.db.RoomRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.math.BigInteger;
 import java.util.List;
 
 @Service
@@ -22,7 +20,7 @@ public class RoomService {
         return roomRepository.findAll();
     }
 
-    public RoomEntity findById(BigInteger id) {
+    public RoomEntity findById(Long id) {
         return roomRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Room not found: " + id));
@@ -32,7 +30,7 @@ public class RoomService {
         return roomRepository.save(room);
     }
 
-    public void delete(BigInteger id) {
+    public void delete(Long id) {
         if (!roomRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found: " + id);
         }

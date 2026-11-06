@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigInteger;
 import java.util.List;
 
 @Service
@@ -22,7 +21,7 @@ public class RefundService {
         return refundRepository.findAll();
     }
 
-    public RefundEntity findById(BigInteger id) {
+    public RefundEntity findById(Long id) {
         return refundRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Refund not found: " + id));
@@ -32,7 +31,7 @@ public class RefundService {
         return refundRepository.save(refund);
     }
 
-    public void delete(BigInteger id) {
+    public void delete(Long id) {
         if (!refundRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Refund not found: " + id);
         }

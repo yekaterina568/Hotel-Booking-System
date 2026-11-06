@@ -4,7 +4,6 @@ import com.hotelbooking.guest.db.GuestEntity;
 import com.hotelbooking.guest.service.GuestService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import java.math.BigInteger;
 
 import java.util.List;
 
@@ -24,7 +23,7 @@ public class GuestController {
     }
 
     @GetMapping("/{id}")
-    public GuestEntity getById(@PathVariable BigInteger id) {
+    public GuestEntity getById(@PathVariable Long id) {
         return guestService.findById(id);
     }
 
@@ -36,7 +35,7 @@ public class GuestController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable BigInteger id) {
+    public void delete(@PathVariable Long id) {
         guestService.delete(id);
     }
 }

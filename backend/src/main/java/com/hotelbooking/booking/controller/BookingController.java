@@ -5,7 +5,6 @@ import com.hotelbooking.booking.service.BookingService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigInteger;
 import java.util.List;
 
 @RestController
@@ -24,7 +23,7 @@ public class BookingController {
     }
 
     @GetMapping("/{id}")
-    public BookingEntity getById(@PathVariable BigInteger id) {
+    public BookingEntity getById(@PathVariable Long id) {
         return bookingService.findById(id);
     }
 
@@ -35,12 +34,12 @@ public class BookingController {
     }
 
     @PostMapping("/{id}/check-in")
-    public BookingEntity checkIn(@PathVariable BigInteger id) {
+    public BookingEntity checkIn(@PathVariable Long id) {
         return bookingService.checkIn(id);
     }
 
     @PostMapping("/{id}/cancel")
-    public BookingEntity cancel(@PathVariable BigInteger id) {
+    public BookingEntity cancel(@PathVariable Long id) {
         return bookingService.cancel(id);
     }
 }

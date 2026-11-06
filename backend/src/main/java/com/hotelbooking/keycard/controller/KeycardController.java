@@ -24,7 +24,7 @@ public class KeycardController {
     }
 
     @GetMapping("/{id}")
-    public KeycardEntity getById(@PathVariable BigInteger id) {
+    public KeycardEntity getById(@PathVariable Long id) {
         return keycardService.findById(id);
     }
 
@@ -36,7 +36,7 @@ public class KeycardController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable BigInteger id) {
+    public void delete(@PathVariable Long id) {
         keycardService.delete(id);
     }
 }

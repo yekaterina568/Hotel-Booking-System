@@ -3,8 +3,6 @@ package com.hotelbooking.booking.archive.controller;
 import com.hotelbooking.booking.archive.db.BookingArchiveEntity;
 import com.hotelbooking.booking.archive.service.BookingArchiveService;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigInteger;
 import java.util.List;
 
 @RestController
@@ -23,12 +21,12 @@ public class BookingArchiveController {
     }
 
     @GetMapping("/{id}")
-    public BookingArchiveEntity getById(@PathVariable BigInteger id) {
+    public BookingArchiveEntity getById(@PathVariable Long id) {
         return archiveService.findById(id);
     }
 
     @PostMapping("/bookings/{bookingId}")
-    public BookingArchiveEntity archive(@PathVariable BigInteger bookingId) {
+    public BookingArchiveEntity archive(@PathVariable Long bookingId) {
         return archiveService.archive(bookingId);
     }
 }

@@ -7,7 +7,6 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.math.BigInteger;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -16,7 +15,7 @@ public class BookingEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "booking_id")
-    BigInteger bookingId;
+    Long bookingId;
 
     @ManyToOne
     @JoinColumn(name = "guest_id")
@@ -37,8 +36,8 @@ public class BookingEntity {
     @Column(name = "created_at")
     OffsetDateTime createdAt;
 
-    public BigInteger getBookingId() { return bookingId; }
-    public void setBookingId(BigInteger bookingId) { this.bookingId = bookingId; }  
+    public Long getBookingId() { return bookingId; }
+    public void setBookingId(Long bookingId) { this.bookingId = bookingId; }
 
     public GuestEntity getGuest() { return guest; }
     public void setGuest(GuestEntity guest) { this.guest = guest; }

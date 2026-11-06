@@ -5,7 +5,6 @@ import com.hotelbooking.refund.service.RefundService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigInteger;
 import java.util.List;
 
 @RestController
@@ -24,7 +23,7 @@ public class RefundController {
     }
 
     @GetMapping("/{id}")
-    public RefundEntity getById(@PathVariable BigInteger id) {
+    public RefundEntity getById(@PathVariable Long id) {
         return refundService.findById(id);
     }
 
@@ -36,7 +35,7 @@ public class RefundController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable BigInteger id) {
+    public void delete(@PathVariable Long id) {
         refundService.delete(id);
     }
 }

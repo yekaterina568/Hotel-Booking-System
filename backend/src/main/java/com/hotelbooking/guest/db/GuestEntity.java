@@ -1,8 +1,6 @@
 package com.hotelbooking.guest.db;
 
 import jakarta.persistence.*;
-
-import java.math.BigInteger;
 import java.time.OffsetDateTime;
 
 @Entity

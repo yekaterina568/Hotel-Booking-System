@@ -4,8 +4,6 @@ import com.hotelbooking.room.db.RoomEntity;
 import com.hotelbooking.room.service.RoomService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigInteger;
 import java.util.List;
 
 @RestController
@@ -24,7 +22,7 @@ public class RoomController {
     }
 
     @GetMapping("/{id}")
-    public RoomEntity getById(@PathVariable BigInteger id) {
+    public RoomEntity getById(@PathVariable Long id) {
         return roomService.findById(id);
     }
 
@@ -36,7 +34,7 @@ public class RoomController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable BigInteger id) {
+    public void delete(@PathVariable Long id) {
         roomService.delete(id);
     }
 }

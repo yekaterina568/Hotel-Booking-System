@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigInteger;
 import java.util.List;
 
 @Service
@@ -29,14 +28,14 @@ public class BookingArchiveService {
         return archiveRepository.findAll();
     }
 
-    public BookingArchiveEntity findById(BigInteger id) {
+    public BookingArchiveEntity findById(Long id) {
         return archiveRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Archive record not found: " + id));
     }
 
     @Transactional
-    public BookingArchiveEntity archive(BigInteger bookingId) {
+    public BookingArchiveEntity archive(Long bookingId) {
         BookingEntity booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Booking not found: " + bookingId));
