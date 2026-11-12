@@ -33,3 +33,5 @@ build/
 .vscode/
 .idea
 .env
+node_modules/
+frontend/test-results/

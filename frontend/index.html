@@ -3,68 +3,86 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hotel Booking System — Front-Desk & Housekeeping</title>
+  <title>Hotel Booking System — Stage 0</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <h1>🏨 Hotel Booking System</h1>
-    <p>Front-Desk Room Check-in & Arrival Management</p>
-  </header>
-
-  <main class="container">
-    <!-- Aruzhan's Section: Front-Desk UI & Early Arrival Priority Queue -->
-    <section class="card">
-      <h2>🛎️ Receptionist Dashboard (Aruzhan)</h2>
-      
-      <div class="search-box">
-        <h3>Passport Validation & Check-in</h3>
-        <div class="form-group">
-          <input type="text" id="passportInput" placeholder="Enter passport number (e.g. N12345678)" />
-          <button id="validateBtn">Validate Document</button>
-        </div>
-        <p id="validationMsg" class="msg"></p>
-      </div>
-
-      <h3>⚡ Early Arrival Priority Queue (Cleaned Rooms)</h3>
-      <table id="queueTable">
-        <thead>
-          <tr>
-            <th>Booking ID</th>
-            <th>Guest Name</th>
-            <th>Room No.</th>
-            <th>Expected Arrival</th>
-            <th>Cleaning Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="queueTbody">
-          <!-- Populated from app.js -->
-        </tbody>
-      </table>
-    </section>
-
-    <!-- Ayan's Section: Housekeeping UI & Status Management -->
-    <section class="card">
-      <h2>🧹 Housekeeping Dashboard (Ayan)</h2>
-      <p>Room Status Management (3 Statuses: Cleaned, Cleaning, Dirty)</p>
-
-      <table id="roomsTable">
-        <thead>
-          <tr>
-            <th>Room No.</th>
-            <th>Room Type</th>
-            <th>Current Status</th>
-            <th>Change Status</th>
-          </tr>
-        </thead>
-        <tbody id="roomsTbody">
-          <!-- Populated from app.js -->
-        </tbody>
-      </table>
-    </section>
-  </main>
-
-  <script src="app.js"></script>
+<header><h1>Hotel Booking System</h1><p>Reception · Housekeeping · Test payments</p></header>
+<main class="container">
+  <section class="card">
+    <h2>Staff connection</h2>
+    <p>Sign in to load live hotel records. Payment and RFID operations are simulations.</p>
+    <form id="loginForm">
+      <label>Username <input name="username" autocomplete="username" value="staff" required></label>
+      <label>Password <input name="password" autocomplete="current-password" type="password" required></label>
+      <button>Connect</button><button id="logoutBtn" type="button">Disconnect</button>
+    </form>
+    <p id="connectionMsg" class="msg" role="status" aria-live="polite"></p>
+  </section>
+  <section class="card">
+    <h2>Guest registration</h2>
+    <form id="guestForm">
+      <label>Passport <input name="passportNum" pattern="[A-Z0-9]{6,20}" maxlength="20" required></label>
+      <label>First name <input name="firstName" maxlength="30" required></label>
+      <label>Last name <input name="lastName" maxlength="30" required></label>
+      <label>Phone <input name="phoneNum" type="tel" pattern="\+?[0-9]{7,14}" required></label>
+      <button>Register guest</button>
+    </form>
+    <p>Passport format is validated. Registration does not verify identity. Passport and phone are omitted from response lists.</p>
+    <p id="guestMsg" class="msg" role="status"></p>
+  </section>
+  <section class="card">
+    <h2>Reservations</h2>
+    <form id="bookingForm">
+      <label>Guest <select name="guestId" id="guestSelect" required></select></label>
+      <label>Room <select name="roomId" id="roomSelect" required></select></label>
+      <label>Check-in date <input name="checkInDate" type="date" required></label>
+      <label>Check-out date <input name="checkOutDate" type="date" required></label>
+      <label>Expected arrival (hotel local time) <input name="arrivalTime" type="time" value="14:00" required></label>
+      <button>Book room</button><button id="availabilityBtn" type="button">Check availability</button>
+    </form>
+    <p id="bookingMsg" class="msg" role="status"></p>
+    <div class="table-wrap"><table><thead><tr><th>Booking</th><th>Guest</th><th>Hotel / room</th><th>Dates</th><th>State</th><th>Actions</th></tr></thead><tbody id="bookingsTbody"></tbody></table></div>
+    <h3>Ready for check-in</h3><p>Cleaned rooms with an active stay today, ordered by expected arrival. The server checks readiness again when you check in.</p>
+    <div class="table-wrap"><table><thead><tr><th>Booking</th><th>Guest</th><th>Room</th><th>Expected arrival</th><th>Action</th></tr></thead><tbody id="queueTbody"></tbody></table></div>
+  </section>
+  <section class="card">
+    <h2>Housekeeping</h2>
+    <p id="roomMsg" class="msg" role="status"></p>
+    <div class="table-wrap"><table><thead><tr><th>Hotel / room</th><th>Type</th><th>Nightly rate (KZT)</th><th>Cleaning state</th></tr></thead><tbody id="roomsTbody"></tbody></table></div>
+  </section>
+  <section class="card">
+    <h2>Test payments</h2><p>No real card details or charges. Amounts come from the persisted booking cost: nights × nightly rate + 1,000 KZT service fee.</p>
+    <form id="paymentForm">
+      <label>Booking ID <input name="bookingId" type="number" min="1" required></label>
+      <label>Outcome <select name="outcome"><option value="success">Simulated success</option><option value="decline">Simulated decline</option></select></label>
+      <button>Run test payment</button>
+    </form>
+    <p id="paymentMsg" class="msg" role="status"></p>
+    <div class="table-wrap"><table><thead><tr><th>Payment</th><th>Booking</th><th>Amount (KZT)</th><th>State</th></tr></thead><tbody id="paymentsTbody"></tbody></table></div>
+  </section>
+  <section class="card">
+    <h2>Refunds</h2><p>Cancel a paid booking before requesting a refund. Refunds cannot exceed its remaining paid balance.</p>
+    <form id="refundForm">
+      <label>Booking ID <input name="bookingId" type="number" min="1" required></label>
+      <label>Amount (KZT) <input name="amount" type="number" min="0.01" step="0.01" required></label>
+      <label>Reason <input name="refundReason" maxlength="1000" required></label>
+      <button>Request test refund</button>
+    </form>
+    <p id="refundMsg" class="msg" role="status"></p>
+    <div class="table-wrap"><table><thead><tr><th>Refund</th><th>Booking</th><th>Payment</th><th>Amount</th><th>State</th></tr></thead><tbody id="refundsTbody"></tbody></table></div>
+  </section>
+  <section class="card">
+    <h2>Verified stay reviews</h2>
+    <form id="reviewForm">
+      <label>Completed booking ID <input name="bookingId" type="number" min="1" required></label>
+      <label>Rating (1–5) <input name="rating" type="number" min="1" max="5" required></label>
+      <label>Comment <input name="comment" maxlength="1000" required></label><button>Save review</button>
+    </form>
+    <p id="reviewMsg" class="msg" role="status"></p>
+    <ul id="reviewsList"></ul>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
 </body>
 </html>

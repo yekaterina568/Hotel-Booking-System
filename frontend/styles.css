@@ -115,3 +115,13 @@ th {
 }
 .msg.success { color: #166534; }
 .msg.error { color: #991b1b; }
+form { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; align-items: end; }
+label { display: flex; flex-direction: column; gap: 6px; flex: 1 1 160px; }
+select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; max-width: 100%; }
+.table-wrap { overflow-x: auto; }
+td button { margin: 2px; }
+p { line-height: 1.5; }
+button:disabled { opacity: .6; cursor: wait; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
+ul { padding-left: 20px; }
+@media (max-width: 600px) { body { padding: 8px; } .card { padding: 16px; } th,td { padding: 8px; } }
