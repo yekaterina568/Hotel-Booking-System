@@ -3,67 +3,143 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hotel Booking System — Front-Desk & Housekeeping</title>
+  <title>Hotel PMS — Front-Desk Operations</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <h1>🏨 Hotel Booking System</h1>
-    <p>Front-Desk Room Check-in & Arrival Management</p>
-  </header>
-
-  <main class="container">
-    <!-- Aruzhan's Section: Front-Desk UI & Early Arrival Priority Queue -->
-    <section class="card">
-      <h2>🛎️ Receptionist Dashboard (Aruzhan)</h2>
-      
-      <div class="search-box">
-        <h3>Passport Validation & Check-in</h3>
-        <div class="form-group">
-          <input type="text" id="passportInput" placeholder="Enter passport number (e.g. N12345678)" />
-          <button id="validateBtn">Validate Document</button>
+  <div class="app-layout">
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">H</span>
+        <div class="brand-info">
+          <span class="brand-name">Grand Almaty PMS</span>
+          <span class="brand-sub">Front-Desk Portal</span>
         </div>
-        <p id="validationMsg" class="msg"></p>
       </div>
 
-      <h3>⚡ Early Arrival Priority Queue (Cleaned Rooms)</h3>
-      <table id="queueTable">
-        <thead>
-          <tr>
-            <th>Booking ID</th>
-            <th>Guest Name</th>
-            <th>Room No.</th>
-            <th>Expected Arrival</th>
-            <th>Cleaning Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="queueTbody">
-          <!-- Populated from app.js -->
-        </tbody>
-      </table>
-    </section>
+      <nav class="nav-menu">
+        <a href="#checkin-section" class="nav-item active">Arrivals & Check-in</a>
+        <a href="#refunds-section" class="nav-item">Billing & Refunds</a>
+      </nav>
 
-    <!-- Ayan's Section: Housekeeping UI & Status Management -->
-    <section class="card">
-      <h2>🧹 Housekeeping Dashboard (Ayan)</h2>
-      <p>Room Status Management (3 Statuses: Cleaned, Cleaning, Dirty)</p>
+      <div class="operator-box">
+        <div class="operator-role">Front-Desk Operator</div>
+        <div class="operator-name">Aruzhan Tanatar</div>
+        <div class="operator-id">ID: 24B032049</div>
+      </div>
+    </aside>
 
-      <table id="roomsTable">
-        <thead>
-          <tr>
-            <th>Room No.</th>
-            <th>Room Type</th>
-            <th>Current Status</th>
-            <th>Change Status</th>
-          </tr>
-        </thead>
-        <tbody id="roomsTbody">
-          <!-- Populated from app.js -->
-        </tbody>
-      </table>
-    </section>
-  </main>
+    <!-- Main Workspace -->
+    <div class="main-wrapper">
+      <header class="topbar">
+        <div class="page-title">Front-Desk Operations & Arrival Management</div>
+        <div class="system-status">
+          <span class="status-dot"></span> System Online
+        </div>
+      </header>
+
+      <main class="workspace">
+        <!-- Section 1: Passport Verification & Early Arrivals -->
+        <section id="checkin-section" class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Guest Identity Verification</h2>
+              <p class="panel-desc">Validate guest passport format and check database registration before keycard encoding.</p>
+            </div>
+          </div>
+
+          <div class="panel-body">
+            <div class="inline-form">
+              <div class="field-group">
+                <label for="passportInput">Passport / ID Number</label>
+                <input type="text" id="passportInput" placeholder="e.g. N12345678" autocomplete="off" />
+              </div>
+              <button id="validateBtn" class="btn btn-primary">Verify Guest</button>
+            </div>
+            <div id="validationMsg" class="feedback-banner"></div>
+          </div>
+        </section>
+
+        <!-- Section 2: Priority Queue -->
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Early Arrival Priority Queue</h2>
+              <p class="panel-desc">Confirmed reservations matched with inspected and cleaned rooms ready for immediate check-in.</p>
+            </div>
+            <span class="badge-neutral">Auto-Matched</span>
+          </div>
+
+          <div class="table-container">
+            <table id="queueTable">
+              <thead>
+                <tr>
+                  <th>Booking Ref</th>
+                  <th>Guest Full Name</th>
+                  <th>Assigned Room</th>
+                  <th>ETA</th>
+                  <th>Room State</th>
+                  <th class="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="queueTbody">
+                <!-- Populated by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Section 3: Refund Processing -->
+        <section id="refunds-section" class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Cancellation & Refund Processing</h2>
+              <p class="panel-desc">Issue guest refunds for cancelled bookings and log financial adjustments.</p>
+            </div>
+          </div>
+
+          <div class="panel-body border-bottom">
+            <form id="refundForm" class="grid-form">
+              <div class="field-group">
+                <label for="refundBookingId">Booking ID</label>
+                <input type="number" id="refundBookingId" placeholder="101" required />
+              </div>
+              <div class="field-group">
+                <label for="refundAmount">Amount (USD)</label>
+                <input type="number" id="refundAmount" placeholder="120.00" step="0.01" required />
+              </div>
+              <div class="field-group span-2">
+                <label for="refundReason">Reason for Refund</label>
+                <input type="text" id="refundReason" placeholder="Flight cancellation / Early checkout" required />
+              </div>
+              <div class="field-action">
+                <button type="submit" class="btn btn-danger">Issue Refund</button>
+              </div>
+            </form>
+            <div id="refundMsg" class="feedback-banner"></div>
+          </div>
+
+          <div class="table-container">
+            <table id="refundsTable">
+              <thead>
+                <tr>
+                  <th>Refund ID</th>
+                  <th>Booking Ref</th>
+                  <th>Amount</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="refundsTbody">
+                <!-- Populated by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
