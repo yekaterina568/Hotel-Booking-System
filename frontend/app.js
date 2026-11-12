@@ -88,7 +88,6 @@ document.getElementById('validateBtn').addEventListener('click', async () => {
   msg.textContent = `✓ Passport ${passportVal} passed format validation & DB lookup.`;
   msg.className = 'msg success';
 });
-
 // 4. Загрузка списка возвратов из таблицы Refunds в БД
 async function loadRefunds() {
   const tbody = document.getElementById('refundsTbody');
@@ -105,13 +104,19 @@ async function loadRefunds() {
   }
 
   refundsData.forEach(r => {
+    const id = r.refundId ?? r.refund_id;
+    const bId = r.booking?.bookingId ?? r.bookingId ?? r.booking_id;
+    const amt = r.amount;
+    const reason = r.refundReason ?? r.refund_reason;
+    const st = r.state ?? r.status ?? 'COMPLETED';
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>#${r.refund_id}</td>
-      <td>#${r.booking_id}</td>
-      <td>$${r.amount}</td>
-      <td>${r.refund_reason}</td>
-      <td><span class="badge badge-cleaned">${r.status}</span></td>
+      <td>#${id}</td>
+      <td>#${bId}</td>
+      <td>$${amt}</td>
+      <td>${reason}</td>
+      <td><span class="badge badge-cleaned">${st}</span></td>
     `;
     tbody.appendChild(tr);
   });
@@ -120,15 +125,18 @@ async function loadRefunds() {
 // 5. Создание нового возврата (POST /api/refunds -> запись в БД)
 document.getElementById('refundForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const bookingId = document.getElementById('refundBookingId').value;
-  const amount = document.getElementById('refundAmount').value;
+  const bookingId = Number(document.getElementById('refundBookingId').value);
+  const amount = parseFloat(document.getElementById('refundAmount').value);
   const reason = document.getElementById('refundReason').value;
   const refundMsg = document.getElementById('refundMsg');
 
+  // Отправляем поля в формате, который ждёт Spring Boot (поддерживает и bookingId, и вложенный booking)
   const payload = {
-    booking_id: Number(bookingId),
-    amount: parseFloat(amount).toFixed(2),
-    refund_reason: reason
+    bookingId: bookingId,
+    booking: { bookingId: bookingId },
+    amount: amount,
+    refundReason: reason,
+    state: 'COMPLETED'
   };
 
   try {
@@ -139,7 +147,7 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
     });
 
     if (response.ok) {
-      refundMsg.textContent = `✓ Refund of $${payload.amount} for Booking #${bookingId} saved to Database!`;
+      refundMsg.textContent = `✓ Refund of $${amount.toFixed(2)} for Booking #${bookingId} saved to Database!`;
       refundMsg.className = 'msg success';
       document.getElementById('refundForm').reset();
       loadRefunds();
@@ -152,12 +160,12 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
   // Fallback обновление таблицы на экране
   localRefunds.push({
     refund_id: localRefunds.length + 1,
-    booking_id: payload.booking_id,
-    amount: payload.amount,
-    refund_reason: payload.refund_reason,
-    status: 'Completed'
+    booking_id: bookingId,
+    amount: amount.toFixed(2),
+    refund_reason: reason,
+    status: 'COMPLETED'
   });
-  refundMsg.textContent = `✓ Refund of $${payload.amount} for Booking #${bookingId} processed!`;
+  refundMsg.textContent = `✓ Refund of $${amount.toFixed(2)} for Booking #${bookingId} processed!`;
   refundMsg.className = 'msg success';
   document.getElementById('refundForm').reset();
   loadRefunds();
