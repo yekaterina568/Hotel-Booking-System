@@ -1,42 +1,18 @@
 package com.hotelbooking.guest.controller;
-
-import com.hotelbooking.guest.db.GuestEntity;
+import static com.hotelbooking.api.ApiDtos.*;
 import com.hotelbooking.guest.service.GuestService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import java.math.BigInteger;
-
 import java.util.List;
-
-@RestController
-@RequestMapping("/api/guests")
+@RestController @RequestMapping("/api/guests") @RequiredArgsConstructor
 public class GuestController {
+    private final GuestService service;
 
-    private final GuestService guestService;
+    @GetMapping public List<GuestResponse> getAll() { return service.findAll(); }
+    @GetMapping("/{id}") public GuestResponse getById(@PathVariable Long id) { return service.findById(id); }
+    @PostMapping @ResponseStatus(HttpStatus.CREATED) public GuestResponse create(@Valid @RequestBody GuestRequest request) { return service.create(request); }
+    @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void delete(@PathVariable Long id) { service.delete(id); }
 
-    public GuestController(GuestService guestService) {
-        this.guestService = guestService;
-    }
-
-    @GetMapping
-    public List<GuestEntity> getAll() {
-        return guestService.findAll();
-    }
-
-    @GetMapping("/{id}")
-    public GuestEntity getById(@PathVariable BigInteger id) {
-        return guestService.findById(id);
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public GuestEntity create(@RequestBody GuestEntity guest) {
-        return guestService.create(guest);
-    }
-
-    @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable BigInteger id) {
-        guestService.delete(id);
-    }
 }

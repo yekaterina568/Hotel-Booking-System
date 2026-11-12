@@ -1,0 +1,6 @@
+spring:
+  liquibase:
+    contexts: dev
+hotel:
+  staff:
+    password: ${HOTEL_STAFF_PASSWORD:demo-password}

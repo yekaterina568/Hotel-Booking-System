@@ -1,57 +1,34 @@
 package com.hotelbooking.booking.archive.service;
-
-import com.hotelbooking.booking.archive.db.BookingArchiveEntity;
-import com.hotelbooking.booking.archive.db.BookingArchiveRepository;
-import com.hotelbooking.booking.db.BookingEntity;
-import com.hotelbooking.booking.db.BookingRepository;
+import com.hotelbooking.api.*;
+import static com.hotelbooking.api.ApiDtos.*;
+import static com.hotelbooking.api.ApiErrors.*;
+import com.hotelbooking.booking.archive.db.*;
+import com.hotelbooking.booking.service.BookingService;
 import com.hotelbooking.booking.model.BookingState;
-import org.springframework.http.HttpStatus;
+import com.hotelbooking.room.model.CleaningState;
+import com.hotelbooking.keycard.service.KeycardService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-
+import org.springframework.cache.annotation.CacheEvict;
+import java.time.OffsetDateTime;
 import java.util.List;
-
-@Service
+@Service @RequiredArgsConstructor @Transactional(readOnly=true)
 public class BookingArchiveService {
-
-    private final BookingRepository bookingRepository;
-    private final BookingArchiveRepository archiveRepository;
-
-    public BookingArchiveService(BookingRepository bookingRepository,
-                                 BookingArchiveRepository archiveRepository) {
-        this.bookingRepository = bookingRepository;
-        this.archiveRepository = archiveRepository;
-    }
-
-    public List<BookingArchiveEntity> findAll() {
-        return archiveRepository.findAll();
-    }
-
-    public BookingArchiveEntity findById(Long id) {
-        return archiveRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Archive record not found: " + id));
-    }
-
-    @Transactional
-    public BookingArchiveEntity archive(Long bookingId) {
-        BookingEntity booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Booking not found: " + bookingId));
-
-        if (booking.getState() == BookingState.CONFIRMED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Нельзя архивировать активную бронь");
-        }
-        if (booking.getState() == BookingState.ARCHIVED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Бронь уже в архиве");
-        }
-
-        BookingArchiveEntity archived = new BookingArchiveEntity();
-        booking.setState(BookingState.ARCHIVED);
-        bookingRepository.save(booking);
-        return archiveRepository.save(archived);
+    private final BookingArchiveRepository archives;
+    private final BookingService bookings;
+    private final KeycardService keycards;
+    public List<ArchiveResponse> findAll() { return archives.findAll().stream().map(Views::archive).toList(); }
+    public ArchiveResponse findById(Long id) { return Views.archive(archives.findById(id).orElseThrow(() -> missing("Archive"))); }
+    @Transactional @CacheEvict(value="rooms",allEntries=true)
+    public ArchiveResponse archive(Long id) {
+        var b=bookings.locked(id); if(b.getState()!=BookingState.CANCELLED && b.getState()!=BookingState.CHECKEDIN) throw conflict("Only cancelled bookings or checked-in stays can be archived");
+        if(archives.existsById(id)) throw conflict("Booking is already archived");
+        var e=new BookingArchiveEntity(); e.setBookingId(id); e.setGuest(b.getGuest()); e.setRoom(b.getRoom());
+        e.setExpectedArrival(b.getExpectedArrival()); e.setCreatedAt(b.getCreatedAt()); e.setState(b.getState());
+        e.setCheckInDate(b.getCheckInDate()); e.setCheckOutDate(b.getCheckOutDate()); e.setArchivedAt(OffsetDateTime.now());
+        archives.save(e);
+        if(b.getState()==BookingState.CHECKEDIN) b.getRoom().setCleaningState(CleaningState.DIRTY);
+        b.setState(BookingState.ARCHIVED); keycards.deactivate(id); return Views.archive(e);
     }
 }

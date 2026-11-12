@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: ${TEST_DATABASE_URL:jdbc:postgresql://127.0.0.1:55433/stage0_test}
+    username: ${TEST_DATABASE_USER:stage0}
+    password: ${TEST_DATABASE_PASSWORD:stage0-test-only}
+  liquibase:
+    contexts: test
+hotel:
+  staff:
+    username: test-staff
+    password: test-password
+logging:
+  level:
+    root: WARN

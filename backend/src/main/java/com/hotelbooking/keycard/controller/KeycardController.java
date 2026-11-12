@@ -1,42 +1,18 @@
 package com.hotelbooking.keycard.controller;
-
-import com.hotelbooking.keycard.db.KeycardEntity;
+import static com.hotelbooking.api.ApiDtos.*;
 import com.hotelbooking.keycard.service.KeycardService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigInteger;
 import java.util.List;
-
-@RestController
-@RequestMapping("/api/keycards")
+@RestController @RequestMapping("/api/keycards") @RequiredArgsConstructor
 public class KeycardController {
+    private final KeycardService service;
 
-    private final KeycardService keycardService;
+    @GetMapping public List<KeycardResponse> getAll() { return service.findAll(); }
+    @GetMapping("/{id}") public KeycardResponse getById(@PathVariable Long id) { return service.findById(id); }
+    @PostMapping @ResponseStatus(HttpStatus.CREATED) public KeycardResponse create(@Valid @RequestBody KeycardRequest request) { return service.create(request); }
+    @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void delete(@PathVariable Long id) { service.delete(id); }
 
-    public KeycardController(KeycardService keycardService) {
-        this.keycardService = keycardService;
-    }
-
-    @GetMapping
-    public List<KeycardEntity> getAll() {
-        return keycardService.findAll();
-    }
-
-    @GetMapping("/{id}")
-    public KeycardEntity getById(@PathVariable BigInteger id) {
-        return keycardService.findById(id);
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public KeycardEntity create(@RequestBody KeycardEntity keycard) {
-        return keycardService.create(keycard);
-    }
-
-    @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable BigInteger id) {
-        keycardService.delete(id);
-    }
 }

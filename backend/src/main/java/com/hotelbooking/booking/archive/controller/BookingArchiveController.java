@@ -1,33 +1,17 @@
 package com.hotelbooking.booking.archive.controller;
-
-import com.hotelbooking.booking.archive.db.BookingArchiveEntity;
+import static com.hotelbooking.api.ApiDtos.*;
 import com.hotelbooking.booking.archive.service.BookingArchiveService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
-
-@RestController
-@RequestMapping("/api/archive")
+@RestController @RequestMapping("/api/archive") @RequiredArgsConstructor
 public class BookingArchiveController {
+    private final BookingArchiveService service;
 
-    private final BookingArchiveService archiveService;
+    @GetMapping public List<ArchiveResponse> getAll() { return service.findAll(); }
+    @GetMapping("/{id}") public ArchiveResponse getById(@PathVariable Long id) { return service.findById(id); }
+    @PostMapping("/bookings/{id}") public ArchiveResponse archive(@PathVariable Long id) { return service.archive(id); }
 
-    public BookingArchiveController(BookingArchiveService archiveService) {
-        this.archiveService = archiveService;
-    }
-
-    @GetMapping
-    public List<BookingArchiveEntity> getAll() {
-        return archiveService.findAll();
-    }
-
-    @GetMapping("/{id}")
-    public BookingArchiveEntity getById(@PathVariable Long id) {
-        return archiveService.findById(id);
-    }
-
-    @PostMapping("/bookings/{bookingId}")
-    public BookingArchiveEntity archive(@PathVariable Long bookingId) {
-        return archiveService.archive(bookingId);
-    }
 }

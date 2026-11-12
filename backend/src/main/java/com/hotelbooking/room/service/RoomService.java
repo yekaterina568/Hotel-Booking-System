@@ -1,41 +1,33 @@
 package com.hotelbooking.room.service;
-
-import com.hotelbooking.room.db.RoomEntity;
-import com.hotelbooking.room.db.RoomRepository;
-import org.springframework.http.HttpStatus;
+import com.hotelbooking.api.*;
+import static com.hotelbooking.api.ApiDtos.*;
+import static com.hotelbooking.api.ApiErrors.*;
+import com.hotelbooking.room.db.*;
+import com.hotelbooking.hotel.db.HotelRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.math.BigInteger;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.*;
 import java.util.List;
-
-@Service
+@Service @RequiredArgsConstructor @Transactional(readOnly = true)
 public class RoomService {
-
-    private final RoomRepository roomRepository;
-
-    public RoomService(RoomRepository roomRepository) {
-        this.roomRepository = roomRepository;
+    private final RoomRepository rooms;
+    private final HotelRepository hotels;
+    @Cacheable("rooms")
+    public List<RoomResponse> findAll() { return rooms.findAll().stream().map(Views::room).toList(); }
+    public RoomResponse findById(Long id) { return Views.room(rooms.findById(id).orElseThrow(() -> missing("Room"))); }
+    @Transactional @CacheEvict(value="rooms",allEntries=true)
+    public RoomResponse create(RoomRequest r) {
+        var e=new RoomEntity(); e.setHotel(hotels.findById(r.hotelId()).orElseThrow(() -> missing("Hotel")));
+        e.setRoomNumber(r.roomNumber()); e.setRoomType(r.roomType()); e.setCleaningState(r.cleaningState()); e.setPricePerNight(r.pricePerNight());
+        return Views.room(rooms.save(e));
     }
-
-    public List<RoomEntity> findAll() {
-        return roomRepository.findAll();
+    @Transactional @CacheEvict(value="rooms",allEntries=true)
+    public RoomResponse update(Long id, RoomUpdate r) {
+        var e=rooms.lockById(id).orElseThrow(() -> missing("Room"));
+        e.setCleaningState(r.cleaningState()); if(r.pricePerNight()!=null) e.setPricePerNight(r.pricePerNight());
+        return Views.room(e);
     }
-
-    public RoomEntity findById(BigInteger id) {
-        return roomRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Room not found: " + id));
-    }
-
-    public RoomEntity create(RoomEntity room) {
-        return roomRepository.save(room);
-    }
-
-    public void delete(BigInteger id) {
-        if (!roomRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found: " + id);
-        }
-        roomRepository.deleteById(id);
-    }
+    @Transactional @CacheEvict(value="rooms",allEntries=true)
+    public void delete(Long id) { rooms.delete(rooms.lockById(id).orElseThrow(() -> missing("Room"))); rooms.flush(); }
 }

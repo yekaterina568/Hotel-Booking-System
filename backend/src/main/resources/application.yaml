@@ -13,7 +13,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    open-in-view: false
+    show-sql: false
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     enabled: true
@@ -25,4 +26,10 @@ management:
         include: health
 
 server:
-  port: 8080
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8080}
+
+hotel:
+  staff:
+    username: ${HOTEL_STAFF_USERNAME:staff}
+    password: ${HOTEL_STAFF_PASSWORD}
