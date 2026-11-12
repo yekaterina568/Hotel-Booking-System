@@ -1,0 +1,9 @@
+UPGRADE_EVIDENCE schema=stage0_upgrade_49c684cbb6b747e9843d5d40090bc71d bookings=1001 original_rows_unchanged=true seed_absent=true
+FRESH_EVIDENCE schema=stage0_fresh_b74eaea109f442e6b29b21f57bea06ab opt_in_seed=true repeat_run=true
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.208 s -- in com.hotelbooking.MigrationUpgradeTest
+[INFO] Tests run: 26, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 16.15 s -- in com.hotelbooking.HotelBookingApplicationTest
+[INFO] Tests run: 28, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building jar: /Users/daniarboranov/Documents/code_materials/bis/Hotel-Booking-System/backend/target/Hotel-Booking-System-0.0.1-SNAPSHOT.jar
+[INFO] BUILD SUCCESS
+[INFO] Total time:  20.973 s
+[INFO] Finished at: 2026-11-12T23:31:30+05:00

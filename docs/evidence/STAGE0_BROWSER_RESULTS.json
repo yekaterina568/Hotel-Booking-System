@@ -1,0 +1,68 @@
+{
+  "base": "http://127.0.0.1:18080",
+  "bookingId": 1,
+  "secondId": 2,
+  "roomId": 3,
+  "evidence": [
+    {
+      "test": "Browser guest registration",
+      "expected": "one PostgreSQL guest; response lists omit passport/phone",
+      "actual": "one PostgreSQL guest; response lists omit passport/phone",
+      "status": "Passed"
+    },
+    {
+      "test": "Browser booking and cost join",
+      "expected": "two nights; persisted total 31000.00 KZT",
+      "actual": "two nights; persisted total 31000.00 KZT",
+      "status": "Passed"
+    },
+    {
+      "test": "Browser declined payment",
+      "expected": "decline is displayed as an error and stored as DECLINED",
+      "actual": "decline is displayed as an error and stored as DECLINED",
+      "status": "Passed"
+    },
+    {
+      "test": "Browser payment retry",
+      "expected": "one successful PostgreSQL payment after two identical submissions",
+      "actual": "one successful PostgreSQL payment after two identical submissions",
+      "status": "Passed"
+    },
+    {
+      "test": "Browser backend failure",
+      "expected": "visible error; zero phantom refund records",
+      "actual": "visible error; zero phantom refund records",
+      "status": "Passed"
+    },
+    {
+      "test": "Browser refund retry and persistence",
+      "expected": "one PostgreSQL refund for 10000.00 KZT",
+      "actual": "one PostgreSQL refund for 10000.00 KZT",
+      "status": "Passed"
+    },
+    {
+      "test": "Browser cleaning, queue and check-in",
+      "expected": "Dirty excluded from queue; Cleaned check-in creates one active keycard",
+      "actual": "Dirty excluded from queue; Cleaned check-in creates one active keycard",
+      "status": "Passed"
+    },
+    {
+      "test": "Browser checkout/archive",
+      "expected": "archive persisted; room Dirty; keycard inactive",
+      "actual": "archive persisted; room Dirty; keycard inactive",
+      "status": "Passed"
+    },
+    {
+      "test": "Browser verified review and safe text rendering",
+      "expected": "rating 5 persisted; HTML rendered as text",
+      "actual": "rating 5 persisted; HTML rendered as text",
+      "status": "Passed"
+    },
+    {
+      "test": "Browser layout and JavaScript",
+      "expected": "no document overflow at 390px; zero uncaught JavaScript errors",
+      "actual": "no document overflow at 390px; zero uncaught JavaScript errors",
+      "status": "Passed"
+    }
+  ]
+}

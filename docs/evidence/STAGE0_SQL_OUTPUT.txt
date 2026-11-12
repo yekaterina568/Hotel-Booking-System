@@ -1,0 +1,97 @@
+BEGIN
+        hotel         | room_number | booking_id | first_name |   state   | check_in_date | check_out_date | nights | nightly_rate | subtotal | service_fee |  total   | currency | estimated_legacy
+----------------------+-------------+------------+------------+-----------+---------------+----------------+--------+--------------+----------+-------------+----------+----------+------------------
+ Browser B3E5AED968D4 |         101 |          2 | Browser    | Archived  | 2026-11-12    | 2026-11-14     |      2 |     15000.00 | 30000.00 |     1000.00 | 31000.00 | KZT      | f
+ Browser B3E5AED968D4 |         101 |          1 | Browser    | Cancelled | 2026-11-12    | 2026-11-14     |      2 |     15000.00 | 30000.00 |     1000.00 | 31000.00 | KZT      | f
+(2 rows)
+
+ booking_id | payment_id |   state   |  amount  | refunded
+------------+------------+-----------+----------+----------
+          1 |          2 | SUCCEEDED | 31000.00 | 10000.00
+          1 |          1 | DECLINED  | 31000.00 |        0
+(2 rows)
+
+ review_id | booking_id | rating |         name         | room_number | state_before_archive
+-----------+------------+--------+----------------------+-------------+----------------------
+         1 |          2 |      5 | Browser B3E5AED968D4 |         101 | CheckedIn
+(1 row)
+
+        id         |  author   |                      filename                      |               md5sum               | exectype
+-------------------+-----------+----------------------------------------------------+------------------------------------+----------
+ 001               | developer | db/changelog/changes/001-create-initial-tables.sql | 9:f7e6927bd955ca338fa8a8beb62d024f | EXECUTED
+ 002-stage0        | team      | db/changelog/changes/002-stage0-schema.sql         | 9:2b27110c2b463255c79274ab15cda7c8 | EXECUTED
+ 003-stage0-guards | team      | db/changelog/changes/003-stage0-guards.sql         | 9:19149e4040cb9f88b6389a83568070cf | EXECUTED
+ 004-dev-seed      | team      | db/changelog/changes/004-dev-seed.sql              | 9:78fa1dc4afa596181da764c9943b5de1 | EXECUTED
+(4 rows)
+
+             conname              |                                                                                                             definition
+----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ chk_room_price                   | CHECK ((price_per_night >= (0)::numeric))
+ fk_rooms_hotel                   | FOREIGN KEY (hotel_id) REFERENCES hotels(hotel_id)
+ rooms_pkey                       | PRIMARY KEY (room_id)
+ uq_hotel_room_number             | UNIQUE (hotel_id, room_number)
+ bookings_pkey                    | PRIMARY KEY (booking_id)
+ chk_booking_dates                | CHECK ((((check_in_date IS NULL) AND (check_out_date IS NULL)) OR ((check_in_date IS NOT NULL) AND (check_out_date IS NOT NULL) AND (check_out_date > check_in_date))))
+ ex_active_booking_dates          | EXCLUDE USING gist (room_id WITH =, daterange(check_in_date, check_out_date, '[)'::text) WITH &&) WHERE (((state = ANY (ARRAY['Confirmed'::booking_state_enum, 'CheckedIn'::booking_state_enum])) AND (check_in_date IS NOT NULL)))
+ fk_bookings_guest                | FOREIGN KEY (guest_id) REFERENCES guests(guest_id) ON DELETE RESTRICT
+ fk_bookings_room                 | FOREIGN KEY (room_id) REFERENCES rooms(room_id) ON DELETE RESTRICT
+ chk_refund_amount                | CHECK ((amount > (0)::numeric))
+ fk_refunds_booking               | FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE RESTRICT
+ refunds_idempotency_key_key      | UNIQUE (idempotency_key)
+ refunds_payment_id_fkey          | FOREIGN KEY (payment_id) REFERENCES payments(payment_id)
+ refunds_pkey                     | PRIMARY KEY (refund_id)
+ booking_costs_booking_id_fkey    | FOREIGN KEY (booking_id) REFERENCES bookings(booking_id)
+ booking_costs_booking_id_key     | UNIQUE (booking_id)
+ booking_costs_check              | CHECK ((subtotal = ((nights)::numeric * nightly_rate)))
+ booking_costs_check1             | CHECK ((total = (subtotal + service_fee)))
+ booking_costs_currency_check     | CHECK (((currency)::text = 'KZT'::text))
+ booking_costs_nightly_rate_check | CHECK ((nightly_rate >= (0)::numeric))
+ booking_costs_nights_check       | CHECK ((nights > 0))
+ booking_costs_pkey               | PRIMARY KEY (cost_id)
+ booking_costs_service_fee_check  | CHECK ((service_fee >= (0)::numeric))
+ payments_amount_check            | CHECK ((amount >= (0)::numeric))
+ payments_booking_id_fkey         | FOREIGN KEY (booking_id) REFERENCES bookings(booking_id)
+ payments_currency_check          | CHECK (((currency)::text = 'KZT'::text))
+ payments_idempotency_key_key     | UNIQUE (idempotency_key)
+ payments_pkey                    | PRIMARY KEY (payment_id)
+ payments_provider_reference_key  | UNIQUE (provider_reference)
+ payments_state_check             | CHECK (((state)::text = ANY ((ARRAY['SUCCEEDED'::character varying, 'DECLINED'::character varying])::text[])))
+ reviews_booking_id_fkey          | FOREIGN KEY (booking_id) REFERENCES bookings(booking_id)
+ reviews_booking_id_key           | UNIQUE (booking_id)
+ reviews_pkey                     | PRIMARY KEY (review_id)
+ reviews_rating_check             | CHECK (((rating >= 1) AND (rating <= 5)))
+(34 rows)
+
+   tablename   |            indexname            |                                                                                                                              indexdef
+---------------+---------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ booking_costs | booking_costs_booking_id_key    | CREATE UNIQUE INDEX booking_costs_booking_id_key ON public.booking_costs USING btree (booking_id)
+ booking_costs | booking_costs_pkey              | CREATE UNIQUE INDEX booking_costs_pkey ON public.booking_costs USING btree (cost_id)
+ bookings      | bookings_pkey                   | CREATE UNIQUE INDEX bookings_pkey ON public.bookings USING btree (booking_id)
+ bookings      | ex_active_booking_dates         | CREATE INDEX ex_active_booking_dates ON public.bookings USING gist (room_id, daterange(check_in_date, check_out_date, '[)'::text)) WHERE ((state = ANY (ARRAY['Confirmed'::booking_state_enum, 'CheckedIn'::booking_state_enum])) AND (check_in_date IS NOT NULL))
+ bookings      | idx_booking_status_arrival      | CREATE INDEX idx_booking_status_arrival ON public.bookings USING btree (state, expected_arrival)
+ bookings      | idx_bookings_guest              | CREATE INDEX idx_bookings_guest ON public.bookings USING btree (guest_id)
+ bookings      | idx_bookings_room               | CREATE INDEX idx_bookings_room ON public.bookings USING btree (room_id)
+ keycards      | idx_keycards_booking            | CREATE INDEX idx_keycards_booking ON public.keycards USING btree (booking_id)
+ keycards      | keycards_card_uid_key           | CREATE UNIQUE INDEX keycards_card_uid_key ON public.keycards USING btree (card_uid)
+ keycards      | keycards_pkey                   | CREATE UNIQUE INDEX keycards_pkey ON public.keycards USING btree (keycard_id)
+ payments      | idx_payments_booking            | CREATE INDEX idx_payments_booking ON public.payments USING btree (booking_id)
+ payments      | payments_idempotency_key_key    | CREATE UNIQUE INDEX payments_idempotency_key_key ON public.payments USING btree (idempotency_key)
+ payments      | payments_pkey                   | CREATE UNIQUE INDEX payments_pkey ON public.payments USING btree (payment_id)
+ payments      | payments_provider_reference_key | CREATE UNIQUE INDEX payments_provider_reference_key ON public.payments USING btree (provider_reference)
+ payments      | uq_payment_success              | CREATE UNIQUE INDEX uq_payment_success ON public.payments USING btree (booking_id) WHERE ((state)::text = 'SUCCEEDED'::text)
+ refunds       | idx_refunds_booking             | CREATE INDEX idx_refunds_booking ON public.refunds USING btree (booking_id)
+ refunds       | idx_refunds_payment             | CREATE INDEX idx_refunds_payment ON public.refunds USING btree (payment_id)
+ refunds       | refunds_idempotency_key_key     | CREATE UNIQUE INDEX refunds_idempotency_key_key ON public.refunds USING btree (idempotency_key)
+ refunds       | refunds_pkey                    | CREATE UNIQUE INDEX refunds_pkey ON public.refunds USING btree (refund_id)
+ reviews       | reviews_booking_id_key          | CREATE UNIQUE INDEX reviews_booking_id_key ON public.reviews USING btree (booking_id)
+ reviews       | reviews_pkey                    | CREATE UNIQUE INDEX reviews_pkey ON public.reviews USING btree (review_id)
+ rooms         | rooms_pkey                      | CREATE UNIQUE INDEX rooms_pkey ON public.rooms USING btree (room_id)
+ rooms         | uq_hotel_room_number            | CREATE UNIQUE INDEX uq_hotel_room_number ON public.rooms USING btree (hotel_id, room_number)
+(23 rows)
+
+ bookings | legacy_undated
+----------+----------------
+        2 |              0
+(1 row)
+
+COMMIT

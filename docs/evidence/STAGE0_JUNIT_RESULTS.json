@@ -1,0 +1,192 @@
+{
+  "executed": "2026-11-12 (Asia/Almaty)",
+  "command": "DEBUG=false ./backend/mvnw -f backend/pom.xml verify",
+  "suites": [
+    {
+      "name": "com.hotelbooking.HotelBookingApplicationTest",
+      "tests": "26",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "16.149"
+    },
+    {
+      "name": "com.hotelbooking.MigrationUpgradeTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.208"
+    }
+  ],
+  "cases": [
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "cancelledOrFutureBookingCannotCheckIn",
+      "seconds": "1.112",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "bookingCreatesDatedCostSnapshotAndCanBeRetrieved",
+      "seconds": "0.437",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "cleaningRoomCannotCheckInUntilCleaned",
+      "seconds": "0.515",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "keycardFailureRollsBackWholeCheckIn",
+      "seconds": "0.387",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "dtoResponsesOmitSensitiveAndInternalFields",
+      "seconds": "0.851",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "hotelRoomUniquenessAndGuestForeignKeyAreEnforced",
+      "seconds": "0.692",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "cacheEvictionWaitsForCommitAndRollbackKeepsData",
+      "seconds": "0.237",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "unauthenticatedApiDeniedAndStaticFrontendAvailable",
+      "seconds": "0.015",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "dirtyRoomCannotCheckIn",
+      "seconds": "0.349",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "cancellationReleasesDatesAndCannotRepeat",
+      "seconds": "0.482",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "reviewRequiresVerifiedStayAndRatingIsValidated",
+      "seconds": "0.737",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "cleanCheckInIssuesOneKeycardAndCannotRepeat",
+      "seconds": "0.481",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "invalidFieldsAndMissingRecordsGiveClientErrors",
+      "seconds": "0.652",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "paymentPersistsAndRetryIsIdempotent",
+      "seconds": "0.51",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "priorityQueueReflectsCleaningChangesAndCheckIn",
+      "seconds": "0.777",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "overlapIsRejectedButAdjacentStayIsAllowed",
+      "seconds": "0.407",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "roomCacheHitsAndInvalidatesAfterUpdateCreateAndDelete",
+      "seconds": "0.515",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "declinedPaymentIsStoredAndCanRetryWithNewKey",
+      "seconds": "0.422",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "availabilityUsesRequestedDates",
+      "seconds": "0.405",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "refundRejectsUnpaidActiveNegativeAndOverBalance",
+      "seconds": "0.851",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "pricingSnapshotSurvivesLaterRoomPriceChange",
+      "seconds": "0.44",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "cancelledBookingCannotBePaidAndKeyCannotChangePayload",
+      "seconds": "0.566",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "concurrentBookingRequestsHaveOneWinner",
+      "seconds": "0.401",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "refundPersistsAndRetryDoesNotDuplicate",
+      "seconds": "0.662",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "databaseRejectsDirectOverlappingDatedInsert",
+      "seconds": "0.288",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.HotelBookingApplicationTest",
+      "name": "archiveCopiesFieldsRevokesKeyAndMarksRoomDirty",
+      "seconds": "0.645",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.MigrationUpgradeTest",
+      "name": "populated001UpgradePreservesLegacyRowsAndBenchmarks",
+      "seconds": "2.018",
+      "status": "Passed"
+    },
+    {
+      "class": "com.hotelbooking.MigrationUpgradeTest",
+      "name": "freshDatabaseMigrationsAndDevelopmentSeedAreOptIn",
+      "seconds": "0.183",
+      "status": "Passed"
+    }
+  ]
+}

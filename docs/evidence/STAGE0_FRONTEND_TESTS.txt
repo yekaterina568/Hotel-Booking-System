@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: API paths and request payloads match backend contracts
+ok 1 - API paths and request payloads match backend contracts
+  ---
+  duration_ms: 0.589
+  type: 'test'
+  ...
+# Subtest: backend validation failure rejects instead of inventing success
+ok 2 - backend validation failure rejects instead of inventing success
+  ---
+  duration_ms: 0.195417
+  type: 'test'
+  ...
+# Subtest: network and non-JSON failures remain visible errors
+ok 3 - network and non-JSON failures remain visible errors
+  ---
+  duration_ms: 0.132208
+  type: 'test'
+  ...
+# Subtest: identical payment/refund retries keep the same idempotency key
+ok 4 - identical payment/refund retries keep the same idempotency key
+  ---
+  duration_ms: 0.072917
+  type: 'test'
+  ...
+# Subtest: arrival uses hotel timezone rather than browser timezone
+ok 5 - arrival uses hotel timezone rather than browser timezone
+  ---
+  duration_ms: 38.721167
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 116.68275
