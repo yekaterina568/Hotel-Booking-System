@@ -6,8 +6,12 @@ import com.hotelbooking.room.db.RoomEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.OffsetDateTime;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "bookings_archive")
 public class BookingArchiveEntity {

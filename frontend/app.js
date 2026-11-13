@@ -8,6 +8,90 @@ let localRefunds = [
   { refund_id: 1, booking_id: 98, amount: '120.00', refund_reason: 'Flight delayed', status: 'Completed' }
 ];
 
+async function loadBookingOptions() {
+  const roomSelect = document.getElementById('bookingRoomId');
+  const bookingMsg = document.getElementById('bookingMsg');
+
+  try {
+    const roomsResponse = await fetch(`${API_BASE_URL}/rooms`);
+    if (!roomsResponse.ok) {
+      throw new Error(`Failed to load rooms (${roomsResponse.status})`);
+    }
+
+    const rooms = await roomsResponse.json();
+
+    roomSelect.replaceChildren(new Option(
+      rooms.length ? 'Select a room' : 'No rooms available',
+      ''
+    ));
+    rooms.forEach(room => {
+      roomSelect.add(new Option(
+        `Room ${room.roomNumber} - ${room.roomType}`,
+        String(room.roomId)
+      ));
+    });
+
+    if (!rooms.length) {
+      bookingMsg.textContent = 'Add at least one room before creating a booking.';
+      bookingMsg.className = 'feedback-banner error';
+    } else {
+      bookingMsg.textContent = '';
+      bookingMsg.className = 'feedback-banner';
+    }
+  } catch (err) {
+    console.error('Unable to load rooms for booking:', err);
+    roomSelect.replaceChildren(new Option('Could not load rooms', ''));
+    bookingMsg.textContent = 'Could not load rooms. Check that the backend is running, then reload the page.';
+    bookingMsg.className = 'feedback-banner error';
+  }
+}
+
+document.getElementById('bookingForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const bookingMsg = document.getElementById('bookingMsg');
+  const passport = document.getElementById('bookingGuestPassport').value.trim().toUpperCase();
+  const expectedArrival = document.getElementById('bookingExpectedArrival').value;
+
+  try {
+    const guestsResponse = await fetch(`${API_BASE_URL}/guests`);
+    if (!guestsResponse.ok) {
+      throw new Error(`Failed to look up guest (${guestsResponse.status})`);
+    }
+
+    const guests = await guestsResponse.json();
+    const guest = guests.find(item => item.passportNum === passport);
+    if (!guest) {
+      bookingMsg.textContent = 'No registered guest was found with this passport.';
+      bookingMsg.className = 'feedback-banner error';
+      return;
+    }
+
+    const payload = {
+      guest: { guestId: guest.guestId },
+      room: { roomId: Number(document.getElementById('bookingRoomId').value) },
+      expectedArrival: new Date(expectedArrival).toISOString()
+    };
+    const response = await fetch(`${API_BASE_URL}/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      throw new Error(`Booking request failed (${response.status})`);
+    }
+
+    const booking = await response.json();
+    bookingMsg.textContent = `Booking #${booking.bookingId} created successfully.`;
+    bookingMsg.className = 'feedback-banner success';
+    document.getElementById('bookingForm').reset();
+    loadPriorityQueue();
+  } catch (err) {
+    console.error('Unable to create booking:', err);
+    bookingMsg.textContent = 'Could not create booking. Check the passport, selected room, and arrival time.';
+    bookingMsg.className = 'feedback-banner error';
+  }
+});
+
 // 1. Загрузка очереди чистых комнат из БД через Backend API
 async function loadPriorityQueue() {
   const tbody = document.getElementById('queueTbody');
@@ -15,9 +99,34 @@ async function loadPriorityQueue() {
 
   let queueData = localQueue;
   try {
-    const response = await fetch(`${API_BASE_URL}/bookings/priority-queue`);
-    if (response.ok) {
-      queueData = await response.json();
+    const [bookingsResponse, roomsResponse, guestsResponse] = await Promise.all([
+      fetch(`${API_BASE_URL}/bookings`),
+      fetch(`${API_BASE_URL}/rooms`),
+      fetch(`${API_BASE_URL}/guests`)
+    ]);
+
+    if (bookingsResponse.ok && roomsResponse.ok && guestsResponse.ok) {
+      const [bookings, rooms, guests] = await Promise.all([
+        bookingsResponse.json(),
+        roomsResponse.json(),
+        guestsResponse.json()
+      ]);
+      queueData = bookings
+        .filter(booking => booking.state === 'CONFIRMED')
+        .map(booking => {
+          const room = rooms.find(item => item.roomId === booking.roomId);
+          const guest = guests.find(item => item.guestId === booking.guestId);
+          if (!room || !guest || room.cleaningState !== 'CLEANED') return null;
+
+          return {
+            booking_id: booking.bookingId,
+            full_name: `${guest.firstName} ${guest.lastName}`,
+            room_number: room.roomNumber,
+            expected_arrival: booking.expectedArrival,
+            cleaning_status: room.cleaningState
+          };
+        })
+        .filter(Boolean);
     }
   } catch (err) {
     console.warn('Backend offline, using cached state:', err);
@@ -44,10 +153,8 @@ async function loadPriorityQueue() {
 // 2. Отправка запроса на автоматическое заселение (POST в БД)
 async function autoAssign(bookingId, roomNumber) {
   try {
-    const response = await fetch(`${API_BASE_URL}/checkin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ booking_id: bookingId, room_number: roomNumber })
+    const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/check-in`, {
+      method: 'POST'
     });
 
     if (response.ok) {
@@ -74,10 +181,17 @@ document.getElementById('validateBtn').addEventListener('click', async () => {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/guests/validate?passport=${passportVal}`);
+    const response = await fetch(`${API_BASE_URL}/guests`);
     if (response.ok) {
-      const data = await response.json();
-      msg.textContent = `✓ Verified in DB: Guest ${data.full_name} (Passport: ${passportVal})`;
+      const guests = await response.json();
+      const guest = guests.find(item => item.passportNum === passportVal);
+      if (!guest) {
+        msg.textContent = `❌ Passport ${passportVal} was not found in the database.`;
+        msg.className = 'msg error';
+        return;
+      }
+
+      msg.textContent = `✓ Verified in DB: Guest ${guest.firstName} ${guest.lastName} (Passport: ${passportVal})`;
       msg.className = 'msg success';
       return;
     }
@@ -130,9 +244,8 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
   const reason = document.getElementById('refundReason').value;
   const refundMsg = document.getElementById('refundMsg');
 
-  // Отправляем поля в формате, который ждёт Spring Boot (поддерживает и bookingId, и вложенный booking)
+  // Booking is a ManyToOne relation in the backend entity.
   const payload = {
-    bookingId: bookingId,
     booking: { bookingId: bookingId },
     amount: amount,
     refundReason: reason,
@@ -172,5 +285,6 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
 });
 
 // Инициализация при открытии страницы
+loadBookingOptions();
 loadPriorityQueue();
 loadRefunds();

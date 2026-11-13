@@ -3,11 +3,15 @@ package com.hotelbooking.room.db;
 import com.hotelbooking.room.model.CleaningState;
 import com.hotelbooking.room.model.RoomType;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "rooms")
 public class RoomEntity {

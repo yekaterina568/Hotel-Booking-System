@@ -13,6 +13,17 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     enabled: true
+  cache:
+    type: caffeine
+    cache-names:
+      - bookings
+      - bookingArchive
+      - guests
+      - rooms
+      - keycards
+      - refunds
+    caffeine:
+      spec: "maximumSize=1000,expireAfterWrite=2m,recordStats"
 
 management:
   endpoints:

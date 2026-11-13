@@ -1,6 +1,7 @@
 package com.hotelbooking.refund.controller;
 
 import com.hotelbooking.refund.db.RefundEntity;
+import com.hotelbooking.refund.model.RefundDto;
 import com.hotelbooking.refund.service.RefundService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -18,18 +19,18 @@ public class RefundController {
     }
 
     @GetMapping
-    public List<RefundEntity> getAll() {
+    public List<RefundDto> getAll() {
         return refundService.findAll();
     }
 
     @GetMapping("/{id}")
-    public RefundEntity getById(@PathVariable Long id) {
+    public RefundDto getById(@PathVariable Long id) {
         return refundService.findById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RefundEntity create(@RequestBody RefundEntity refund) {
+    public RefundDto create(@RequestBody RefundEntity refund) {
         return refundService.create(refund);
     }
 

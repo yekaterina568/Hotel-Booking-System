@@ -2,3 +2,9 @@ databaseChangeLog:
   - include:
       file: changes/001-create-initial-tables.sql
       relativeToChangelogFile: true
+  - include:
+      file: changes/002-align-enum-values-with-java.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/003-seed-demo-rooms.sql
+      relativeToChangelogFile: true
