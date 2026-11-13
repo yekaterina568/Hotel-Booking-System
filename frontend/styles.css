@@ -404,3 +404,62 @@ tbody tr:hover {
   color: var(--success-text);
   border: 1px solid var(--success-border);
 }
+/* All Bookings list (Makhanbet Iskendir) */
+.booking-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.booking-filter label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.booking-filter select {
+  width: auto;
+}
+
+.booking-filter .feedback-banner {
+  margin-top: 0;
+  flex: 1;
+}
+
+.badge-confirmed {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-checkedin {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+}
+
+.badge-cancelled {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid var(--danger-border);
+}
+
+.badge-archived {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.empty-row td {
+  color: var(--text-secondary);
+  text-align: center;
+}

@@ -20,6 +20,7 @@
 
       <nav class="nav-menu">
         <a href="#booking-section" class="nav-item">New Booking</a>
+        <a href="#bookings-list-section" class="nav-item">All Bookings</a>
         <a href="#checkin-section" class="nav-item active">Arrivals & Check-in</a>
         <a href="#refunds-section" class="nav-item">Billing & Refunds</a>
       </nav>
@@ -70,6 +71,47 @@
               </div>
             </form>
             <div id="bookingMsg" class="feedback-banner"></div>
+          </div>
+        </section>
+
+        <!-- All Bookings: list, filter, check-in / cancel (Makhanbet Iskendir, 24B031880) -->
+        <section id="bookings-list-section" class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>All Bookings</h2>
+              <p class="panel-desc">Every reservation with its current status. Confirmed bookings can be checked in or cancelled here.</p>
+            </div>
+            <button type="button" id="bookingsRefreshBtn" class="btn-assign">Refresh</button>
+          </div>
+
+          <div class="panel-body border-bottom booking-filter">
+            <label for="bookingStateFilter">Show</label>
+            <select id="bookingStateFilter">
+              <option value="">All bookings</option>
+              <option value="CONFIRMED">Confirmed</option>
+              <option value="CHECKEDIN">Checked in</option>
+              <option value="CANCELLED">Cancelled</option>
+              <option value="ARCHIVED">Archived</option>
+            </select>
+            <div id="bookingsListMsg" class="feedback-banner"></div>
+          </div>
+
+          <div class="table-container">
+            <table id="bookingsTable">
+              <thead>
+                <tr>
+                  <th>Booking Ref</th>
+                  <th>Guest</th>
+                  <th>Room</th>
+                  <th>Expected Arrival</th>
+                  <th>Status</th>
+                  <th class="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="bookingsTbody">
+                <!-- Populated by app.js -->
+              </tbody>
+            </table>
           </div>
         </section>
 

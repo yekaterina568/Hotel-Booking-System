@@ -66,9 +66,10 @@ document.getElementById('bookingForm').addEventListener('submit', async event =>
       return;
     }
 
+    // POST /api/bookings expects BookingRequest: { guestId, roomId, expectedArrival }
     const payload = {
-      guest: { guestId: guest.guestId },
-      room: { roomId: Number(document.getElementById('bookingRoomId').value) },
+      guestId: guest.guestId,
+      roomId: Number(document.getElementById('bookingRoomId').value),
       expectedArrival: new Date(expectedArrival).toISOString()
     };
     const response = await fetch(`${API_BASE_URL}/bookings`, {
@@ -77,7 +78,10 @@ document.getElementById('bookingForm').addEventListener('submit', async event =>
       body: JSON.stringify(payload)
     });
     if (!response.ok) {
-      throw new Error(`Booking request failed (${response.status})`);
+      // Show the server's reason, e.g. "Room 101 is already booked on 2026-11-20"
+      bookingMsg.textContent = `Could not create booking: ${await apiErrorMessage(response)}`;
+      bookingMsg.className = 'feedback-banner error';
+      return;
     }
 
     const booking = await response.json();
@@ -85,6 +89,7 @@ document.getElementById('bookingForm').addEventListener('submit', async event =>
     bookingMsg.className = 'feedback-banner success';
     document.getElementById('bookingForm').reset();
     loadPriorityQueue();
+    loadBookings();
   } catch (err) {
     console.error('Unable to create booking:', err);
     bookingMsg.textContent = 'Could not create booking. Check the passport, selected room, and arrival time.';
@@ -160,8 +165,12 @@ async function autoAssign(bookingId, roomNumber) {
     if (response.ok) {
       alert(`✓ Database updated: Guest booking #${bookingId} checked into Room No. ${roomNumber}. RFID Keycard encoded!`);
       loadPriorityQueue();
+      loadBookings();
       return;
     }
+    // e.g. 409 "Room 103 is not cleaned yet": don't pretend the check-in worked
+    alert(`✗ Check-in failed: ${await apiErrorMessage(response)}`);
+    return;
   } catch (err) {
     console.warn('API call fallback:', err);
   }
@@ -284,7 +293,121 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
   loadRefunds();
 });
 
+// 6. All Bookings — список броней, фильтр, check-in / cancel (Makhanbet Iskendir, 24B031880)
+//    GET  /api/bookings[?state=CONFIRMED]   список (BookingDto: bookingId, guestId, roomId, ...)
+//    POST /api/bookings/{id}/check-in       заселить (только CONFIRMED и убранная комната)
+//    POST /api/bookings/{id}/cancel         отменить (только CONFIRMED)
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
+function formatDateTime(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso ?? '';
+  return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+// Spring Boot sends the reason in "message" (server.error.include-message=always)
+async function apiErrorMessage(response) {
+  try {
+    const body = await response.json();
+    return body.message || body.detail || body.error || `HTTP ${response.status}`;
+  } catch {
+    return `HTTP ${response.status}`;
+  }
+}
+
+function showBookingsListMsg(text, type) {
+  const msg = document.getElementById('bookingsListMsg');
+  msg.textContent = text;
+  msg.className = text ? `feedback-banner ${type}` : 'feedback-banner';
+}
+
+async function loadBookings() {
+  const tbody = document.getElementById('bookingsTbody');
+  const state = document.getElementById('bookingStateFilter').value;
+  const url = state ? `${API_BASE_URL}/bookings?state=${state}` : `${API_BASE_URL}/bookings`;
+
+  let bookings, guests, rooms;
+  try {
+    const [bookingsRes, guestsRes, roomsRes] = await Promise.all([
+      fetch(url), fetch(`${API_BASE_URL}/guests`), fetch(`${API_BASE_URL}/rooms`)
+    ]);
+    if (!bookingsRes.ok) throw new Error(await apiErrorMessage(bookingsRes));
+    bookings = await bookingsRes.json();
+    guests = guestsRes.ok ? await guestsRes.json() : [];
+    rooms = roomsRes.ok ? await roomsRes.json() : [];
+  } catch (err) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Backend is offline. Start the Spring Boot app to see bookings.</td></tr>';
+    return;
+  }
+
+  if (bookings.length === 0) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No bookings found.</td></tr>';
+    return;
+  }
+
+  bookings.sort((a, b) => new Date(a.expectedArrival) - new Date(b.expectedArrival));
+  tbody.innerHTML = '';
+  bookings.forEach(b => {
+    // BookingDto has only ids, so names and room numbers come from /guests and /rooms
+    const guest = guests.find(g => g.guestId === b.guestId);
+    const room = rooms.find(r => r.roomId === b.roomId);
+    const guestName = guest ? `${guest.firstName} ${guest.lastName}` : `Guest #${b.guestId}`;
+    const roomLabel = room ? `No. ${room.roomNumber}` : `Room #${b.roomId}`;
+    const actions = b.state === 'CONFIRMED' ? `
+      <button class="btn-assign" onclick="checkInBooking(${b.bookingId})">Check-in</button>
+      <button class="btn-assign" onclick="cancelBooking(${b.bookingId})">Cancel</button>` : '';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>#${b.bookingId}</td>
+      <td>${escapeHtml(guestName)}</td>
+      <td><strong>${roomLabel}</strong></td>
+      <td>${formatDateTime(b.expectedArrival)}</td>
+      <td><span class="badge badge-${String(b.state).toLowerCase()}">${b.state}</span></td>
+      <td><div class="row-actions">${actions}</div></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function changeBookingState(bookingId, action, doneText) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/${action}`, { method: 'POST' });
+    if (!response.ok) {
+      showBookingsListMsg(`✗ ${await apiErrorMessage(response)}`, 'error');
+      return;
+    }
+    showBookingsListMsg(`✓ Booking #${bookingId} ${doneText}.`, 'success');
+    loadBookings();
+    loadPriorityQueue();
+  } catch (err) {
+    showBookingsListMsg('✗ Backend is offline.', 'error');
+  }
+}
+
+function checkInBooking(bookingId) {
+  changeBookingState(bookingId, 'check-in', 'checked in');
+}
+
+function cancelBooking(bookingId) {
+  if (confirm(`Cancel booking #${bookingId}?`)) {
+    changeBookingState(bookingId, 'cancel', 'cancelled');
+  }
+}
+
+document.getElementById('bookingStateFilter').addEventListener('change', () => {
+  showBookingsListMsg('', '');
+  loadBookings();
+});
+document.getElementById('bookingsRefreshBtn').addEventListener('click', loadBookings);
+
 // Инициализация при открытии страницы
 loadBookingOptions();
 loadPriorityQueue();
 loadRefunds();
+loadBookings();

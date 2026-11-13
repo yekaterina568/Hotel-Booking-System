@@ -33,3 +33,6 @@ management:
 
 server:
   port: 8080
+  error:
+    # send the reason of a 400/404/409 to the frontend, e.g. "Room 101 is already booked on 2026-11-20"
+    include-message: always

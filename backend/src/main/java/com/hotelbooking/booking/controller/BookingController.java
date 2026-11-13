@@ -1,7 +1,8 @@
 package com.hotelbooking.booking.controller;
 
-import com.hotelbooking.booking.db.BookingEntity;
 import com.hotelbooking.booking.model.BookingDto;
+import com.hotelbooking.booking.model.BookingRequest;
+import com.hotelbooking.booking.model.BookingState;
 import com.hotelbooking.booking.service.BookingService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +19,11 @@ public class BookingController {
         this.bookingService = bookingService;
     }
 
+    // GET /api/bookings, /api/bookings?state=CONFIRMED, /api/bookings?guestId=5
     @GetMapping
-    public List<BookingDto> getAll() {
-        return bookingService.findAll();
+    public List<BookingDto> getAll(@RequestParam(required = false) BookingState state,
+                                   @RequestParam(required = false) Long guestId) {
+        return bookingService.findAll(state, guestId);
     }
 
     @GetMapping("/{id}")
@@ -30,8 +33,8 @@ public class BookingController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public BookingDto create(@RequestBody BookingEntity booking) {
-        return bookingService.create(booking);
+    public BookingDto create(@RequestBody BookingRequest request) {
+        return bookingService.create(request);
     }
 
     @PostMapping("/{id}/check-in")
