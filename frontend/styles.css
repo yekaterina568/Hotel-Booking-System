@@ -245,6 +245,7 @@ body {
   color: var(--text-secondary);
 }
 
+select,
 input {
   height: 36px;
   padding: 0 12px;
@@ -256,6 +257,7 @@ input {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
+select:focus,
 input:focus {
   outline: none;
   border-color: #111827;

@@ -171,6 +171,115 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
   loadRefunds();
 });
 
+// ===================== PAYMENTS (БД <-> Backend <-> Frontend) =====================
+// Здесь НЕТ «фейкового успеха»: если бэкенд/БД не ответили или отклонили запрос,
+// пользователь видит реальную причину, а запись в таблицу не добавляется.
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+// Универсальный вызов API: бросает Error с понятным текстом
+async function apiRequest(path, options = {}) {
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options
+    });
+  } catch (networkErr) {
+    throw new Error('Нет связи с сервером (backend на localhost:8080 не запущен?)');
+  }
+  if (!response.ok) {
+    let detail = '';
+    try {
+      const body = await response.json();
+      detail = body.message || body.error || '';
+    } catch (_) { /* тело не JSON */ }
+    throw new Error(detail || `Ошибка сервера (HTTP ${response.status})`);
+  }
+  return response.status === 204 ? null : response.json();
+}
+
+function showPaymentMsg(text, ok) {
+  const el = document.getElementById('paymentMsg');
+  el.textContent = text;
+  el.className = `feedback-banner ${ok ? 'success' : 'error'}`;
+}
+
+function setApiStatus(online) {
+  const el = document.getElementById('apiStatus');
+  el.textContent = online ? 'API Online' : 'API Offline';
+}
+
+async function loadPayments() {
+  const tbody = document.getElementById('paymentsTbody');
+  try {
+    const payments = await apiRequest('/payments');
+    setApiStatus(true);
+    tbody.innerHTML = '';
+    if (payments.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7">No payments yet.</td></tr>';
+      return;
+    }
+    payments.forEach(p => {
+      const paidAt = p.paidAt ? new Date(p.paidAt).toLocaleString() : '';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>#${escapeHtml(p.paymentId)}</td>
+        <td>#${escapeHtml(p.bookingId)}</td>
+        <td>$${Number(p.amount).toFixed(2)}</td>
+        <td>${escapeHtml(p.method)}</td>
+        <td><span class="badge badge-cleaned">${escapeHtml(p.status)}</span></td>
+        <td>${escapeHtml(p.transactionRef)}</td>
+        <td>${escapeHtml(paidAt)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    setApiStatus(false);
+    tbody.innerHTML = `<tr><td colspan="7">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const submitBtn = document.getElementById('paymentSubmit');
+  const bookingId = Number(document.getElementById('paymentBookingId').value);
+  const amount = parseFloat(document.getElementById('paymentAmount').value);
+  const method = document.getElementById('paymentMethod').value;
+
+  if (!Number.isInteger(bookingId) || bookingId < 1) {
+    showPaymentMsg('Укажите корректный номер брони.', false);
+    return;
+  }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    showPaymentMsg('Сумма оплаты должна быть больше 0.', false);
+    return;
+  }
+
+  submitBtn.disabled = true;
+  try {
+    const saved = await apiRequest('/payments', {
+      method: 'POST',
+      body: JSON.stringify({ bookingId, amount, method })
+    });
+    showPaymentMsg(
+      `✓ Payment $${Number(saved.amount).toFixed(2)} (${saved.method}) for Booking #${saved.bookingId} saved. Transaction ${saved.transactionRef}.`,
+      true
+    );
+    document.getElementById('paymentForm').reset();
+    loadPayments();
+  } catch (err) {
+    showPaymentMsg(`❌ ${err.message}`, false);
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
 // Инициализация при открытии страницы
 loadPriorityQueue();
 loadRefunds();
+loadPayments();

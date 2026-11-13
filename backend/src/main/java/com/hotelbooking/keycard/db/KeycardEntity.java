@@ -2,9 +2,13 @@ package com.hotelbooking.keycard.db;
 
 import com.hotelbooking.booking.db.BookingEntity;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.OffsetDateTime;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "keycards")
 public class KeycardEntity {
