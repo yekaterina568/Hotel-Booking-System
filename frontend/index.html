@@ -20,6 +20,7 @@
 
       <nav class="nav-menu">
         <a href="#checkin-section" class="nav-item active">Arrivals & Check-in</a>
+        <a href="#housekeeping-section" class="nav-item">Housekeeping</a>
         <a href="#payments-section" class="nav-item">Payments</a>
         <a href="#refunds-section" class="nav-item">Billing & Refunds</a>
       </nav>
@@ -85,6 +86,33 @@
                 </tr>
               </thead>
               <tbody id="queueTbody">
+                <!-- Populated by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Section: Housekeeping -->
+        <section id="housekeeping-section" class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Housekeeping — Room Cleaning Status</h2>
+              <p class="panel-desc">Set each room to Cleaned, Cleaning or Dirty. Changes are saved to the database immediately.</p>
+            </div>
+            <span id="roomsStatus" class="badge-neutral">Loading…</span>
+          </div>
+          <div id="housekeepingMsg" class="feedback-banner"></div>
+          <div class="table-container">
+            <table id="roomsTable">
+              <thead>
+                <tr>
+                  <th>Room</th>
+                  <th>Type</th>
+                  <th>Price / night</th>
+                  <th>Cleaning Status</th>
+                </tr>
+              </thead>
+              <tbody id="roomsTbody">
                 <!-- Populated by app.js -->
               </tbody>
             </table>

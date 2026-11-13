@@ -1,6 +1,7 @@
 package com.hotelbooking.room.controller;
 
 import com.hotelbooking.room.db.RoomEntity;
+import com.hotelbooking.room.dto.CleaningStateRequest;
 import com.hotelbooking.room.service.RoomService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,12 @@ public class RoomController {
     @ResponseStatus(HttpStatus.CREATED)
     public RoomEntity create(@RequestBody RoomEntity room) {
         return roomService.create(room);
+    }
+
+    @PutMapping("/{id}/cleaning-state")
+    public RoomEntity updateCleaningState(@PathVariable Long id,
+                                          @RequestBody CleaningStateRequest request) {
+        return roomService.updateCleaningState(id, request.cleaningState());
     }
 
     @DeleteMapping("/{id}")

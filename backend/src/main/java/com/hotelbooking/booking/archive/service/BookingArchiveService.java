@@ -40,17 +40,17 @@ public class BookingArchiveService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Booking not found: " + bookingId));
 
-        if (booking.getState() == BookingState.CONFIRMED) {
+        if (booking.getState() == BookingState.Confirmed) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Нельзя архивировать активную бронь");
         }
-        if (booking.getState() == BookingState.ARCHIVED) {
+        if (booking.getState() == BookingState.Archived) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Бронь уже в архиве");
         }
 
         BookingArchiveEntity archived = new BookingArchiveEntity();
-        booking.setState(BookingState.ARCHIVED);
+        booking.setState(BookingState.Archived);
         bookingRepository.save(booking);
         return archiveRepository.save(archived);
     }

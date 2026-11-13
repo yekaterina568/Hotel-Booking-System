@@ -108,7 +108,7 @@ async function loadRefunds() {
     const bId = r.booking?.bookingId ?? r.bookingId ?? r.booking_id;
     const amt = r.amount;
     const reason = r.refundReason ?? r.refund_reason;
-    const st = r.state ?? r.status ?? 'COMPLETED';
+    const st = r.state ?? r.status ?? 'Completed';
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -136,7 +136,7 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
     booking: { bookingId: bookingId },
     amount: amount,
     refundReason: reason,
-    state: 'COMPLETED'
+    state: 'Completed'
   };
 
   try {
@@ -279,7 +279,69 @@ document.getElementById('paymentForm').addEventListener('submit', async (e) => {
   }
 });
 
+// ===================== HOUSEKEEPING (cleaning_state: Cleaned / Cleaning / Dirty) =====================
+const CLEANING_STATES = ['Cleaned', 'Cleaning', 'Dirty'];
+
+function showHousekeepingMsg(text, ok) {
+  const el = document.getElementById('housekeepingMsg');
+  el.textContent = text;
+  el.className = text ? `feedback-banner ${ok ? 'success' : 'error'}` : 'feedback-banner';
+}
+
+async function loadRooms() {
+  const tbody = document.getElementById('roomsTbody');
+  const badge = document.getElementById('roomsStatus');
+  try {
+    const rooms = await apiRequest('/rooms');
+    rooms.sort((a, b) => a.roomNumber - b.roomNumber);
+    badge.textContent = `${rooms.length} rooms`;
+    tbody.innerHTML = '';
+    if (rooms.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4">No rooms in the database yet.</td></tr>';
+      return;
+    }
+    rooms.forEach(r => {
+      const options = CLEANING_STATES.map(st =>
+        `<option value="${st}" ${st === r.cleaningState ? 'selected' : ''}>${st}</option>`).join('');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>No. ${escapeHtml(r.roomNumber)}</strong></td>
+        <td>${escapeHtml(r.roomType)}</td>
+        <td>$${Number(r.pricePerNight).toFixed(2)}</td>
+        <td><select data-room-id="${escapeHtml(r.roomId)}" data-room-number="${escapeHtml(r.roomNumber)}" data-prev="${escapeHtml(r.cleaningState)}">${options}</select></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    badge.textContent = 'API Offline';
+    tbody.innerHTML = `<tr><td colspan="4">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+document.getElementById('roomsTbody').addEventListener('change', async (e) => {
+  const select = e.target.closest('select[data-room-id]');
+  if (!select) return;
+  const { roomId, roomNumber, prev } = select.dataset;
+  const newState = select.value;
+  select.disabled = true;
+  try {
+    const updated = await apiRequest(`/rooms/${roomId}/cleaning-state`, {
+      method: 'PUT',
+      body: JSON.stringify({ cleaningState: newState })
+    });
+    select.dataset.prev = updated.cleaningState;
+    select.value = updated.cleaningState;
+    showHousekeepingMsg(`✓ Room ${roomNumber} is now ${updated.cleaningState} (saved to database).`, true);
+  } catch (err) {
+    select.value = prev; // откат в интерфейсе: в БД ничего не изменилось
+    showHousekeepingMsg(`❌ Room ${roomNumber}: ${err.message}`, false);
+  } finally {
+    select.disabled = false;
+  }
+});
+
 // Инициализация при открытии страницы
 loadPriorityQueue();
 loadRefunds();
 loadPayments();
+loadRooms();

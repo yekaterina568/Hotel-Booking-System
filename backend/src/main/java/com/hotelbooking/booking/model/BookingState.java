@@ -1,8 +1,9 @@
 package com.hotelbooking.booking.model;
 
+/** Имена констант совпадают с метками enum в PostgreSQL (регистр важен для Hibernate). */
 public enum BookingState {
-    CONFIRMED,
-    CHECKEDIN,
-    CANCELLED,
-    ARCHIVED
+    Confirmed,
+    CheckedIn,
+    Cancelled,
+    Archived
 }

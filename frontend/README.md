@@ -9,7 +9,7 @@
    - Модуль валидации паспорта (Regex-проверка).
 2. **Housekeeping Dashboard (Zeinetula Ayan):**
    - Интерфейс для службы клининга.
-   - Переключение 3 статусов комнат: `Cleaned`, `Cleaning`, `Dirty`.
+   - Переключение 3 статусов комнат: `Cleaned`, `Cleaning`, `Dirty` — список из `GET /api/rooms`, сохранение через `PUT /api/rooms/{id}/cleaning-state` в БД.
 
 3. **Payments (Zeinetula Ayan):**
    - Панель оплаты брони (карта / наличные / перевод) → `POST /api/payments` → таблица `payments` в PostgreSQL.

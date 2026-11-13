@@ -31,28 +31,28 @@ public class BookingService {
     }
 
     public BookingEntity create(BookingEntity booking) {
-        booking.setState(BookingState.CONFIRMED);
+        booking.setState(BookingState.Confirmed);
         booking.setCreatedAt(OffsetDateTime.now());
         return bookingRepository.save(booking);
     }
 
     public BookingEntity checkIn(Long id) {
         BookingEntity booking = findById(id);
-        if (booking.getState() != BookingState.CONFIRMED) {
+        if (booking.getState() != BookingState.Confirmed) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Заселить можно только подтверждённую бронь");
         }
-        booking.setState(BookingState.CHECKEDIN);
+        booking.setState(BookingState.CheckedIn);
         return bookingRepository.save(booking);
     }
 
     public BookingEntity cancel(Long id) {
         BookingEntity booking = findById(id);
-        if (booking.getState() != BookingState.CONFIRMED) {
+        if (booking.getState() != BookingState.Confirmed) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Отменить можно только подтверждённую бронь");
         }
-        booking.setState(BookingState.CANCELLED);
+        booking.setState(BookingState.Cancelled);
         return bookingRepository.save(booking);
     }
 }
