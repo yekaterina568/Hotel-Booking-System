@@ -1,12 +1,19 @@
 package com.hotelbooking.admin;
 
+import com.hotelbooking.booking.archive.service.BookingArchiveService;
+import com.hotelbooking.booking.service.BookingService;
+import com.hotelbooking.guest.service.GuestService;
 import com.hotelbooking.hotel.controller.HotelAdminController;
 import com.hotelbooking.hotel.service.HotelService;
+import com.hotelbooking.keycard.service.KeycardService;
+import com.hotelbooking.refund.service.RefundService;
 import com.hotelbooking.review.controller.ReviewAdminController;
 import com.hotelbooking.review.service.ReviewService;
 import com.hotelbooking.room.controller.RoomController;
 import com.hotelbooking.room.service.RoomService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -28,7 +35,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = {HotelAdminController.class, ReviewAdminController.class, RoomController.class},
+@WebMvcTest(controllers = {HotelAdminController.class, ReviewAdminController.class, RoomController.class,
+        AdminRecordsController.class},
         properties = "hotel.admin.token=admin-access-test")
 class AdminAccessTest {
     private static final String TOKEN = "Bearer admin-access-test";
@@ -53,6 +61,21 @@ class AdminAccessTest {
     @MockitoBean
     private RoomService rooms;
 
+    @MockitoBean
+    private GuestService guests;
+
+    @MockitoBean
+    private BookingService bookings;
+
+    @MockitoBean
+    private BookingArchiveService archive;
+
+    @MockitoBean
+    private RefundService refunds;
+
+    @MockitoBean
+    private KeycardService keycards;
+
     @Test
     void unauthorizedRequestsDoNotReachAdminServices() throws Exception {
         mvc.perform(get("/api/admin/hotels"))
@@ -73,6 +96,19 @@ class AdminAccessTest {
 
         verify(hotels).findAll();
         verify(rooms).findAll();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"rooms", "guests", "bookings", "booking-archive", "refunds", "keycards"})
+    void operationalTablesRequireAdminAccess(String table) throws Exception {
+        String path = "/api/admin/" + table;
+        mvc.perform(get(path)).andExpect(status().isUnauthorized());
+        verifyNoInteractions(rooms, guests, bookings, archive, refunds, keycards);
+
+        mvc.perform(get(path).header(HttpHeaders.AUTHORIZATION, TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+                .andExpect(jsonPath("$").isArray());
     }
 
     @Test

@@ -144,6 +144,60 @@
   width: min(100%, 520px);
 }
 
+.operation-panel {
+  margin-top: 0;
+}
+
+.operation-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 165px);
+  gap: 10px;
+  width: min(100%, 495px);
+}
+
+.operation-filters:has([hidden]) {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 320px;
+}
+
+.operation-panel th,
+.operation-panel td {
+  overflow-wrap: anywhere;
+}
+
+.operation-panel tbody td:first-child {
+  min-width: 112px;
+  font-weight: 600;
+}
+
+.records-footer,
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.records-footer {
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.records-footer .records-count {
+  border: 0;
+  padding: 0;
+}
+
+.pagination {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.admin-page .pagination .btn:disabled {
+  cursor: default;
+}
+
 .admin-records th,
 .admin-records td {
   padding: 12px 16px;
@@ -325,6 +379,7 @@
 
   .admin-nav {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
   }
 
@@ -405,6 +460,10 @@
   .admin-records tbody td:first-child,
   .review-actions {
     grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .operation-panel tbody td:first-child {
     min-width: 0;
   }
 

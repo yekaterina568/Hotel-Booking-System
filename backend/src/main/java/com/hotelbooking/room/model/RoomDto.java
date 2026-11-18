@@ -9,7 +9,8 @@ public record RoomDto(
         Integer roomNumber,
         RoomType roomType,
         CleaningState cleaningState,
-        BigDecimal pricePerNight
+        BigDecimal pricePerNight,
+        Long hotelId
 ) {
     public static RoomDto fromEntity(RoomEntity room) {
         return new RoomDto(
@@ -17,7 +18,8 @@ public record RoomDto(
                 room.getRoomNumber(),
                 room.getRoomType(),
                 room.getCleaningState(),
-                room.getPricePerNight()
+                room.getPricePerNight(),
+                room.getHotelId()
         );
     }
 }

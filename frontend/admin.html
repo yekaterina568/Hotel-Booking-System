@@ -21,6 +21,12 @@
       <nav class="nav-menu" aria-label="Administration">
         <div id="adminNav" class="admin-nav" hidden>
           <a href="#hotels" class="nav-item" aria-current="page">Hotels</a>
+          <a href="#rooms" class="nav-item">Rooms</a>
+          <a href="#guests" class="nav-item">Guests</a>
+          <a href="#bookings" class="nav-item">Bookings</a>
+          <a href="#booking-archive" class="nav-item">Booking archive</a>
+          <a href="#refunds" class="nav-item">Refunds</a>
+          <a href="#keycards" class="nav-item">Keycards</a>
           <a href="#reviews" class="nav-item">Reviews <span id="navPending" class="nav-count" hidden></span></a>
         </div>
         <a href="index.html" class="nav-item front-desk-link">← Front desk</a>
@@ -55,7 +61,7 @@
             </div>
           </div>
 
-          <div class="admin-metrics">
+          <div id="adminMetrics" class="admin-metrics">
             <div class="panel metric">
               <span>Hotels</span>
               <strong id="hotelCount">0</strong>
@@ -136,6 +142,37 @@
               </table>
             </div>
             <p id="reviewResults" class="records-count" aria-live="polite"></p>
+          </section>
+
+          <section id="operationPanel" class="panel admin-records operation-panel" aria-labelledby="dashboardHeading" hidden>
+            <div class="records-toolbar">
+              <div class="operation-filters">
+                <div class="field-group">
+                  <label id="operationSearchLabel" for="operationSearch">Search records</label>
+                  <input id="operationSearch" type="search">
+                </div>
+                <div id="operationStatusField" class="field-group">
+                  <label id="operationStatusLabel" for="operationStatus">Status</label>
+                  <select id="operationStatus"><option value="">All statuses</option></select>
+                </div>
+              </div>
+            </div>
+            <div id="operationTableRegion" class="table-container" role="region" aria-label="Records table" tabindex="0">
+              <table role="table">
+                <thead role="rowgroup">
+                  <tr id="operationColumns"></tr>
+                </thead>
+                <tbody id="operationRows" role="rowgroup"></tbody>
+              </table>
+            </div>
+            <div class="records-footer">
+              <p id="operationResults" class="records-count" role="status"></p>
+              <nav id="operationPages" class="pagination" aria-label="Table pages" hidden>
+                <button id="previousPage" type="button" class="btn btn-secondary">Previous</button>
+                <span id="pageNumber"></span>
+                <button id="nextPage" type="button" class="btn btn-secondary">Next</button>
+              </nav>
+            </div>
           </section>
         </div>
       </div>
