@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hotel PMS — Administration</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="admin.css">
+  <script src="admin.js" defer></script>
+</head>
+<body class="admin-page">
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">H</span>
+        <div class="brand-info">
+          <span class="brand-name">Hotel PMS</span>
+          <span class="brand-sub">Administration</span>
+        </div>
+      </div>
+      <nav class="nav-menu" aria-label="Administration">
+        <div id="adminNav" class="admin-nav" hidden>
+          <a href="#hotels" class="nav-item" aria-current="page">Hotels</a>
+          <a href="#reviews" class="nav-item">Reviews <span id="navPending" class="nav-count" hidden></span></a>
+        </div>
+        <a href="index.html" class="nav-item front-desk-link">← Front desk</a>
+      </nav>
+    </aside>
+
+    <main class="main-wrapper">
+      <header class="topbar">
+        <span class="page-title">Administration</span>
+        <button id="signOut" class="btn btn-secondary" type="button" hidden>Sign out</button>
+      </header>
+
+      <div class="admin-workspace">
+        <section id="signInPanel" class="panel sign-in-panel" aria-labelledby="signInHeading">
+          <h1 id="signInHeading">Admin sign-in</h1>
+          <form id="signInForm">
+            <div class="field-group">
+              <label for="adminToken">Admin access token</label>
+              <input type="password" id="adminToken" autocomplete="off" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Sign in</button>
+            <p id="signInFeedback" class="feedback-banner" role="status"></p>
+          </form>
+        </section>
+
+        <div id="dashboard" hidden>
+          <div class="admin-heading">
+            <h1 id="dashboardHeading" tabindex="-1">Hotels</h1>
+            <div class="heading-actions">
+              <button id="refreshData" class="btn btn-secondary" type="button">Refresh</button>
+              <button id="addRecord" class="btn btn-primary" type="button">Add hotel</button>
+            </div>
+          </div>
+
+          <div class="admin-metrics">
+            <div class="panel metric">
+              <span>Hotels</span>
+              <strong id="hotelCount">0</strong>
+            </div>
+            <div class="panel metric">
+              <span>Pending reviews</span>
+              <strong id="pendingCount">0</strong>
+            </div>
+            <div class="panel metric">
+              <span>Average published rating</span>
+              <strong id="averageRating">—</strong>
+            </div>
+          </div>
+
+          <p id="dashboardFeedback" class="feedback-banner" role="status"></p>
+
+          <section id="hotelPanel" class="panel admin-records" aria-labelledby="hotelPanelHeading">
+            <div class="records-toolbar">
+              <h2 id="hotelPanelHeading">Hotel directory</h2>
+              <div class="field-group">
+                <label for="hotelSearch">Search hotels</label>
+                <input id="hotelSearch" type="search" placeholder="Name, city or address">
+              </div>
+            </div>
+            <div class="table-container" role="region" aria-label="Hotel directory table" tabindex="0">
+              <table role="table">
+                <thead role="rowgroup">
+                  <tr>
+                    <th scope="col">Hotel</th>
+                    <th scope="col">City</th>
+                    <th scope="col">Address</th>
+                    <th scope="col">Reviews</th>
+                    <th scope="col" class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="hotelRows" role="rowgroup"></tbody>
+              </table>
+            </div>
+            <p id="hotelResults" class="records-count" aria-live="polite"></p>
+          </section>
+
+          <section id="reviewPanel" class="panel admin-records" aria-labelledby="reviewPanelHeading" hidden>
+            <div class="records-toolbar">
+              <h2 id="reviewPanelHeading">Guest reviews</h2>
+              <div class="review-filters">
+                <div class="field-group">
+                  <label for="reviewSearch">Search reviews</label>
+                  <input id="reviewSearch" type="search" placeholder="Author or review text">
+                </div>
+                <div class="field-group">
+                  <label for="hotelFilter">Hotel</label>
+                  <select id="hotelFilter"><option value="">All hotels</option></select>
+                </div>
+                <div class="field-group">
+                  <label for="statusFilter">Status</label>
+                  <select id="statusFilter">
+                    <option value="">All statuses</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="PUBLISHED">Published</option>
+                    <option value="HIDDEN">Hidden</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="table-container" role="region" aria-label="Guest reviews table" tabindex="0">
+              <table role="table">
+                <thead role="rowgroup">
+                  <tr>
+                    <th scope="col">Review</th>
+                    <th scope="col">Hotel</th>
+                    <th scope="col">Rating</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Date</th>
+                    <th scope="col" class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="reviewRows" role="rowgroup"></tbody>
+              </table>
+            </div>
+            <p id="reviewResults" class="records-count" aria-live="polite"></p>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="hotelDialog" aria-labelledby="hotelDialogHeading">
+    <form id="hotelForm">
+      <h2 id="hotelDialogHeading">Add hotel</h2>
+      <div class="dialog-fields">
+        <div class="field-group">
+          <label for="hotelName">Name</label>
+          <input id="hotelName" name="name" maxlength="120" required autofocus>
+        </div>
+        <div class="field-group">
+          <label for="hotelCity">City</label>
+          <input id="hotelCity" name="city" maxlength="100" required>
+        </div>
+        <div class="field-group">
+          <label for="hotelAddress">Address <span>(optional)</span></label>
+          <input id="hotelAddress" name="address" maxlength="200">
+        </div>
+        <div class="field-group">
+          <label for="hotelDescription">Description <span>(optional)</span></label>
+          <textarea id="hotelDescription" name="description" rows="4" maxlength="2000"></textarea>
+        </div>
+      </div>
+      <p class="feedback-banner" role="status"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save hotel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="reviewDialog" aria-labelledby="reviewDialogHeading">
+    <form id="reviewForm">
+      <h2 id="reviewDialogHeading">Add review</h2>
+      <div class="dialog-fields">
+        <div class="field-group">
+          <label for="reviewHotel">Hotel</label>
+          <select id="reviewHotel" name="hotelId" required autofocus></select>
+        </div>
+        <div class="field-group">
+          <label for="reviewAuthor">Author name</label>
+          <input id="reviewAuthor" name="authorName" maxlength="100" required>
+        </div>
+        <div class="field-group">
+          <label for="reviewRating">Rating</label>
+          <select id="reviewRating" name="rating" required>
+            <option value="">Select a rating</option>
+            <option value="5">5 / 5</option>
+            <option value="4">4 / 5</option>
+            <option value="3">3 / 5</option>
+            <option value="2">2 / 5</option>
+            <option value="1">1 / 5</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="reviewComment">Review text</label>
+          <textarea id="reviewComment" name="comment" rows="4" maxlength="2000" required></textarea>
+        </div>
+      </div>
+      <p class="feedback-banner" role="status"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save to pending</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="deleteDialog" aria-labelledby="deleteHeading" aria-describedby="deleteDescription">
+    <form id="deleteForm">
+      <h2 id="deleteHeading"></h2>
+      <p id="deleteDescription"></p>
+      <p class="feedback-banner" role="status"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" data-close autofocus>Cancel</button>
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>
