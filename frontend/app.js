@@ -1,12 +1,43 @@
 const API_BASE_URL = 'http://localhost:8080/api';
 
-
 let localQueue = [
   { booking_id: 101, full_name: 'Aruzhan Tanatar', room_number: 101, expected_arrival: '14:00', cleaning_status: 'Cleaned' }
 ];
 let localRefunds = [
   { refund_id: 1, booking_id: 98, amount: '120.00', refund_reason: 'Flight delayed', status: 'Completed' }
 ];
+
+// 0. Переключение страниц (вкладок) в боковом меню
+function switchTab(tabName) {
+  const checkinSec = document.getElementById('checkin-section');
+  const queueSec = document.getElementById('priority-queue-section');
+  const refundsSec = document.getElementById('refunds-section');
+  const pageTitle = document.getElementById('pageTitle');
+  const navItems = document.querySelectorAll('.nav-item');
+
+  navItems.forEach(item => {
+    item.classList.toggle('active', item.dataset.tab === tabName);
+  });
+
+  if (tabName === 'refunds') {
+    checkinSec.style.display = 'none';
+    queueSec.style.display = 'none';
+    refundsSec.style.display = 'block';
+    pageTitle.textContent = 'Billing & Refund Management';
+  } else {
+    checkinSec.style.display = 'block';
+    queueSec.style.display = 'block';
+    refundsSec.style.display = 'none';
+    pageTitle.textContent = 'Front-Desk Operations & Arrival Management';
+  }
+}
+
+document.querySelectorAll('.nav-item').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchTab(link.dataset.tab);
+  });
+});
 
 // 1. Загрузка очереди чистых комнат из БД через Backend API
 async function loadPriorityQueue() {
@@ -31,7 +62,7 @@ async function loadPriorityQueue() {
       <td><strong>No. ${b.room_number}</strong></td>
       <td>${b.expected_arrival}</td>
       <td><span class="badge badge-cleaned">${b.cleaning_status || 'Cleaned'}</span></td>
-      <td>
+      <td class="text-right">
         <button class="btn-assign" onclick="autoAssign(${b.booking_id}, ${b.room_number})">
           Auto Check-in
         </button>
@@ -88,6 +119,7 @@ document.getElementById('validateBtn').addEventListener('click', async () => {
   msg.textContent = `✓ Passport ${passportVal} passed format validation & DB lookup.`;
   msg.className = 'msg success';
 });
+
 // 4. Загрузка списка возвратов из таблицы Refunds в БД
 async function loadRefunds() {
   const tbody = document.getElementById('refundsTbody');
@@ -101,6 +133,11 @@ async function loadRefunds() {
     }
   } catch (err) {
     console.warn('Backend offline, using cached refunds:', err);
+  }
+
+  if (refundsData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">No refunds found in database.</td></tr>';
+    return;
   }
 
   refundsData.forEach(r => {
@@ -117,6 +154,11 @@ async function loadRefunds() {
       <td>$${amt}</td>
       <td>${reason}</td>
       <td><span class="badge badge-cleaned">${st}</span></td>
+      <td class="text-right">
+        <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="cancelRefund(${id})">
+          Cancel
+        </button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -130,7 +172,6 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
   const reason = document.getElementById('refundReason').value;
   const refundMsg = document.getElementById('refundMsg');
 
-  // Отправляем поля в формате, который ждёт Spring Boot (поддерживает и bookingId, и вложенный booking)
   const payload = {
     bookingId: bookingId,
     booking: { bookingId: bookingId },
@@ -157,7 +198,6 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
     console.warn('API call fallback:', err);
   }
 
-  // Fallback обновление таблицы на экране
   localRefunds.push({
     refund_id: localRefunds.length + 1,
     booking_id: bookingId,
@@ -170,6 +210,34 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
   document.getElementById('refundForm').reset();
   loadRefunds();
 });
+
+// 6. Отмена / удаление возврата (DELETE /api/refunds/{id} -> удаление из БД)
+async function cancelRefund(refundId) {
+  if (!confirm(`Cancel and remove Refund #${refundId} from database?`)) {
+    return;
+  }
+
+  const refundMsg = document.getElementById('refundMsg');
+  try {
+    const response = await fetch(`${API_BASE_URL}/refunds/${refundId}`, {
+      method: 'DELETE'
+    });
+
+    if (response.ok) {
+      refundMsg.textContent = `✓ Refund #${refundId} cancelled and removed from Database!`;
+      refundMsg.className = 'msg success';
+      loadRefunds();
+      return;
+    }
+  } catch (err) {
+    console.warn('API delete fallback:', err);
+  }
+
+  localRefunds = localRefunds.filter(r => (r.refundId ?? r.refund_id) !== refundId);
+  refundMsg.textContent = `✓ Refund #${refundId} cancelled!`;
+  refundMsg.className = 'msg success';
+  loadRefunds();
+}
 
 // Инициализация при открытии страницы
 loadPriorityQueue();

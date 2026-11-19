@@ -19,28 +19,26 @@
       </div>
 
       <nav class="nav-menu">
-        <a href="#checkin-section" class="nav-item active">Arrivals & Check-in</a>
-        <a href="#refunds-section" class="nav-item">Billing & Refunds</a>
+        <a href="#checkin-section" data-tab="checkin" class="nav-item active">Arrivals & Check-in</a>
+        <a href="#refunds-section" data-tab="refunds" class="nav-item">Billing & Refunds</a>
       </nav>
 
       <div class="operator-box">
         <div class="operator-role">Front-Desk Operator</div>
-        <div class="operator-name">Aruzhan Tanatar</div>
-        <div class="operator-id">ID: 24B032049</div>
       </div>
     </aside>
 
     <!-- Main Workspace -->
     <div class="main-wrapper">
       <header class="topbar">
-        <div class="page-title">Front-Desk Operations & Arrival Management</div>
+        <div id="pageTitle" class="page-title">Front-Desk Operations & Arrival Management</div>
         <div class="system-status">
           <span class="status-dot"></span> System Online
         </div>
       </header>
 
       <main class="workspace">
-        <!-- Section 1: Passport Verification & Early Arrivals -->
+        <!-- Section 1: Passport Verification -->
         <section id="checkin-section" class="panel">
           <div class="panel-header">
             <div>
@@ -62,7 +60,7 @@
         </section>
 
         <!-- Section 2: Priority Queue -->
-        <section class="panel">
+        <section id="priority-queue-section" class="panel">
           <div class="panel-header">
             <div>
               <h2>Early Arrival Priority Queue</h2>
@@ -90,8 +88,8 @@
           </div>
         </section>
 
-        <!-- Section 3: Refund Processing -->
-        <section id="refunds-section" class="panel">
+        <!-- Section 3: Refund Processing (скрыто по умолчанию, открывается по вкладке Billing & Refunds) -->
+        <section id="refunds-section" class="panel" style="display: none;">
           <div class="panel-header">
             <div>
               <h2>Cancellation & Refund Processing</h2>
@@ -129,6 +127,7 @@
                   <th>Amount</th>
                   <th>Reason</th>
                   <th>Status</th>
+                  <th class="text-right">Action</th>
                 </tr>
               </thead>
               <tbody id="refundsTbody">
