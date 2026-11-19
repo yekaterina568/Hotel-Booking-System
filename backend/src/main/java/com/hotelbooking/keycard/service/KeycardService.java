@@ -2,6 +2,9 @@ package com.hotelbooking.keycard.service;
 
 import com.hotelbooking.keycard.db.KeycardEntity;
 import com.hotelbooking.keycard.db.KeycardRepository;
+import com.hotelbooking.keycard.model.KeycardDto;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,20 +20,28 @@ public class KeycardService {
         this.keycardRepository = keycardRepository;
     }
 
-    public List<KeycardEntity> findAll() {
-        return keycardRepository.findAll();
+    @Cacheable("keycards")
+    public List<KeycardDto> findAll() {
+        return keycardRepository.findAll().stream().map(KeycardDto::fromEntity).toList();
     }
 
-    public KeycardEntity findById(Long id) {
+    @Cacheable("keycards")
+    public KeycardDto findById(Long id) {
+        return KeycardDto.fromEntity(findKeycardEntityById(id));
+    }
+
+    private KeycardEntity findKeycardEntityById(Long id) {
         return keycardRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Keycard not found: " + id));
     }
 
-    public KeycardEntity create(KeycardEntity keycard) {
-        return keycardRepository.save(keycard);
+    @CacheEvict(value = "keycards", allEntries = true)
+    public KeycardDto create(KeycardEntity keycard) {
+        return KeycardDto.fromEntity(keycardRepository.save(keycard));
     }
 
+    @CacheEvict(value = "keycards", allEntries = true)
     public void delete(Long id) {
         if (!keycardRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Keycard not found: " + id);

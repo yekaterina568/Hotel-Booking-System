@@ -1,4 +1,13 @@
 services:
+  frontend:
+    image: nginx:alpine
+    container_name: hotel-booking-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+
   postgres:
     image: postgres:17
     container_name: hotel-booking-db

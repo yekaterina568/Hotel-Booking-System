@@ -2,14 +2,18 @@ package com.hotelbooking.booking.archive.service;
 
 import com.hotelbooking.booking.archive.db.BookingArchiveEntity;
 import com.hotelbooking.booking.archive.db.BookingArchiveRepository;
+import com.hotelbooking.booking.archive.model.BookingArchiveDto;
 import com.hotelbooking.booking.db.BookingEntity;
 import com.hotelbooking.booking.db.BookingRepository;
 import com.hotelbooking.booking.model.BookingState;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -24,18 +28,22 @@ public class BookingArchiveService {
         this.archiveRepository = archiveRepository;
     }
 
-    public List<BookingArchiveEntity> findAll() {
-        return archiveRepository.findAll();
+    @Cacheable("bookingArchive")
+    public List<BookingArchiveDto> findAll() {
+        return archiveRepository.findAll().stream().map(BookingArchiveDto::fromEntity).toList();
     }
 
-    public BookingArchiveEntity findById(Long id) {
-        return archiveRepository.findById(id)
+    @Cacheable("bookingArchive")
+    public BookingArchiveDto findById(Long id) {
+        BookingArchiveEntity archived = archiveRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Archive record not found: " + id));
+        return BookingArchiveDto.fromEntity(archived);
     }
 
     @Transactional
-    public BookingArchiveEntity archive(Long bookingId) {
+    @CacheEvict(value = {"bookingArchive", "bookings"}, allEntries = true)
+    public BookingArchiveDto archive(Long bookingId) {
         BookingEntity booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Booking not found: " + bookingId));
@@ -50,8 +58,15 @@ public class BookingArchiveService {
         }
 
         BookingArchiveEntity archived = new BookingArchiveEntity();
+        archived.setBookingId(booking.getBookingId());
+        archived.setGuest(booking.getGuest());
+        archived.setRoom(booking.getRoom());
+        archived.setExpectedArrival(booking.getExpectedArrival());
+        archived.setState(BookingState.ARCHIVED);
+        archived.setCreatedAt(booking.getCreatedAt());
+        archived.setArchivedAt(OffsetDateTime.now());
         booking.setState(BookingState.ARCHIVED);
         bookingRepository.save(booking);
-        return archiveRepository.save(archived);
+        return BookingArchiveDto.fromEntity(archiveRepository.save(archived));
     }
 }

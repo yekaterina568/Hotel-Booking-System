@@ -49,22 +49,4 @@ public class BookingEntity {
 
     @Column(name = "created_at")
     OffsetDateTime createdAt;
-
-    public Long getBookingId() { return bookingId; }
-    public void setBookingId(Long bookingId) { this.bookingId = bookingId; }
-
-    public GuestEntity getGuest() { return guest; }
-    public void setGuest(GuestEntity guest) { this.guest = guest; }
-
-    public RoomEntity getRoom() { return room; }
-    public void setRoom(RoomEntity room) { this.room = room; }
-
-    public OffsetDateTime getExpectedArrival() { return expectedArrival; }
-    public void setExpectedArrival(OffsetDateTime expectedArrival) { this.expectedArrival = expectedArrival; }
-
-    public BookingState getState() { return state; }
-    public void setState(BookingState state) { this.state = state; }
-
-    public OffsetDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
 }

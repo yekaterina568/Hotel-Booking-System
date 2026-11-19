@@ -1,6 +1,7 @@
 package com.hotelbooking.keycard.controller;
 
 import com.hotelbooking.keycard.db.KeycardEntity;
+import com.hotelbooking.keycard.model.KeycardDto;
 import com.hotelbooking.keycard.service.KeycardService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -19,18 +20,18 @@ public class KeycardController {
     }
 
     @GetMapping
-    public List<KeycardEntity> getAll() {
+    public List<KeycardDto> getAll() {
         return keycardService.findAll();
     }
 
     @GetMapping("/{id}")
-    public KeycardEntity getById(@PathVariable Long id) {
+    public KeycardDto getById(@PathVariable Long id) {
         return keycardService.findById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public KeycardEntity create(@RequestBody KeycardEntity keycard) {
+    public KeycardDto create(@RequestBody KeycardEntity keycard) {
         return keycardService.create(keycard);
     }
 

@@ -1,6 +1,7 @@
 package com.hotelbooking.room.controller;
 
 import com.hotelbooking.room.db.RoomEntity;
+import com.hotelbooking.room.model.RoomDto;
 import com.hotelbooking.room.service.RoomService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -17,18 +18,18 @@ public class RoomController {
     }
 
     @GetMapping
-    public List<RoomEntity> getAll() {
+    public List<RoomDto> getAll() {
         return roomService.findAll();
     }
 
     @GetMapping("/{id}")
-    public RoomEntity getById(@PathVariable Long id) {
+    public RoomDto getById(@PathVariable Long id) {
         return roomService.findById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RoomEntity create(@RequestBody RoomEntity room) {
+    public RoomDto create(@RequestBody RoomEntity room) {
         return roomService.create(room);
     }
 

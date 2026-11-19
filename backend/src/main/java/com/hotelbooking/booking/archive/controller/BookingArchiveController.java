@@ -1,6 +1,7 @@
 package com.hotelbooking.booking.archive.controller;
 
 import com.hotelbooking.booking.archive.db.BookingArchiveEntity;
+import com.hotelbooking.booking.archive.model.BookingArchiveDto;
 import com.hotelbooking.booking.archive.service.BookingArchiveService;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -16,17 +17,17 @@ public class BookingArchiveController {
     }
 
     @GetMapping
-    public List<BookingArchiveEntity> getAll() {
+    public List<BookingArchiveDto> getAll() {
         return archiveService.findAll();
     }
 
     @GetMapping("/{id}")
-    public BookingArchiveEntity getById(@PathVariable Long id) {
+    public BookingArchiveDto getById(@PathVariable Long id) {
         return archiveService.findById(id);
     }
 
     @PostMapping("/bookings/{bookingId}")
-    public BookingArchiveEntity archive(@PathVariable Long bookingId) {
+    public BookingArchiveDto archive(@PathVariable Long bookingId) {
         return archiveService.archive(bookingId);
     }
 }

@@ -245,9 +245,12 @@ body {
   color: var(--text-secondary);
 }
 
-input {
+input,
+select {
   height: 36px;
   padding: 0 12px;
+  width: 100%;
+  box-sizing: border-box;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 13px;
@@ -256,7 +259,8 @@ input {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-input:focus {
+input:focus,
+select:focus {
   outline: none;
   border-color: #111827;
   box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.08);

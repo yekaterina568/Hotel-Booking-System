@@ -21,6 +21,8 @@
       <nav class="nav-menu">
         <a href="#checkin-section" data-tab="checkin" class="nav-item active">Arrivals & Check-in</a>
         <a href="#refunds-section" data-tab="refunds" class="nav-item">Billing & Refunds</a>
+        <a href="#booking-section" data-tab="booking" class="nav-item">New Booking</a>
+        <a href="admin.html" class="nav-item">Administration</a>
       </nav>
 
       <div class="operator-box">
@@ -38,7 +40,43 @@
       </header>
 
       <main class="workspace">
+<<<<<<< HEAD
         <!-- Section 1: Passport Verification -->
+=======
+        <section id="booking-section" class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Create a Booking</h2>
+              <p class="panel-desc">Enter the passport of a registered guest, choose a room, and set the expected arrival time.</p>
+            </div>
+          </div>
+
+          <div class="panel-body">
+            <form id="bookingForm" class="grid-form">
+              <div class="field-group">
+                <label for="bookingGuestPassport">Guest Passport</label>
+                <input type="text" id="bookingGuestPassport" placeholder="Passport / ID number" maxlength="20" autocomplete="off" required />
+              </div>
+              <div class="field-group">
+                <label for="bookingRoomId">Room</label>
+                <select id="bookingRoomId" required>
+                  <option value="">Loading rooms...</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="bookingExpectedArrival">Expected Arrival</label>
+                <input type="datetime-local" id="bookingExpectedArrival" required />
+              </div>
+              <div class="field-action">
+                <button type="submit" class="btn btn-primary">Create Booking</button>
+              </div>
+            </form>
+            <div id="bookingMsg" class="feedback-banner"></div>
+          </div>
+        </section>
+
+        <!-- Section 1: Passport Verification & Early Arrivals -->
+>>>>>>> 47efc2b1b1ac41a55e6e687a27c240de6bf8bc94
         <section id="checkin-section" class="panel">
           <div class="panel-header">
             <div>

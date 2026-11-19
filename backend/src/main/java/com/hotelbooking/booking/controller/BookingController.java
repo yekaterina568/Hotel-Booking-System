@@ -1,6 +1,7 @@
 package com.hotelbooking.booking.controller;
 
 import com.hotelbooking.booking.db.BookingEntity;
+import com.hotelbooking.booking.model.BookingDto;
 import com.hotelbooking.booking.service.BookingService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -18,28 +19,28 @@ public class BookingController {
     }
 
     @GetMapping
-    public List<BookingEntity> getAll() {
+    public List<BookingDto> getAll() {
         return bookingService.findAll();
     }
 
     @GetMapping("/{id}")
-    public BookingEntity getById(@PathVariable Long id) {
+    public BookingDto getById(@PathVariable Long id) {
         return bookingService.findById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public BookingEntity create(@RequestBody BookingEntity booking) {
+    public BookingDto create(@RequestBody BookingEntity booking) {
         return bookingService.create(booking);
     }
 
     @PostMapping("/{id}/check-in")
-    public BookingEntity checkIn(@PathVariable Long id) {
+    public BookingDto checkIn(@PathVariable Long id) {
         return bookingService.checkIn(id);
     }
 
     @PostMapping("/{id}/cancel")
-    public BookingEntity cancel(@PathVariable Long id) {
+    public BookingDto cancel(@PathVariable Long id) {
         return bookingService.cancel(id);
     }
 }

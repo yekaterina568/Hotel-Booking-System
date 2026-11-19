@@ -2,6 +2,9 @@ package com.hotelbooking.room.service;
 
 import com.hotelbooking.room.db.RoomEntity;
 import com.hotelbooking.room.db.RoomRepository;
+import com.hotelbooking.room.model.RoomDto;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,20 +19,28 @@ public class RoomService {
         this.roomRepository = roomRepository;
     }
 
-    public List<RoomEntity> findAll() {
-        return roomRepository.findAll();
+    @Cacheable("rooms")
+    public List<RoomDto> findAll() {
+        return roomRepository.findAll().stream().map(RoomDto::fromEntity).toList();
     }
 
-    public RoomEntity findById(Long id) {
+    @Cacheable("rooms")
+    public RoomDto findById(Long id) {
+        return RoomDto.fromEntity(findRoomEntityById(id));
+    }
+
+    private RoomEntity findRoomEntityById(Long id) {
         return roomRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Room not found: " + id));
     }
 
-    public RoomEntity create(RoomEntity room) {
-        return roomRepository.save(room);
+    @CacheEvict(value = "rooms", allEntries = true)
+    public RoomDto create(RoomEntity room) {
+        return RoomDto.fromEntity(roomRepository.save(room));
     }
 
+    @CacheEvict(value = "rooms", allEntries = true)
     public void delete(Long id) {
         if (!roomRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found: " + id);
