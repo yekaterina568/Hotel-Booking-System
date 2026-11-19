@@ -12,32 +12,110 @@ function switchTab(tabName) {
   const checkinSec = document.getElementById('checkin-section');
   const queueSec = document.getElementById('priority-queue-section');
   const refundsSec = document.getElementById('refunds-section');
+  const bookingSec = document.getElementById('booking-section');
   const pageTitle = document.getElementById('pageTitle');
-  const navItems = document.querySelectorAll('.nav-item');
+  const navItems = document.querySelectorAll('.nav-item[data-tab]');
 
   navItems.forEach(item => {
     item.classList.toggle('active', item.dataset.tab === tabName);
   });
 
+  checkinSec.style.display = 'none';
+  queueSec.style.display = 'none';
+  refundsSec.style.display = 'none';
+  bookingSec.style.display = 'none';
+
   if (tabName === 'refunds') {
-    checkinSec.style.display = 'none';
-    queueSec.style.display = 'none';
     refundsSec.style.display = 'block';
     pageTitle.textContent = 'Billing & Refund Management';
+  } else if (tabName === 'booking') {
+    bookingSec.style.display = 'block';
+    pageTitle.textContent = 'New Reservation & Room Assignment';
   } else {
     checkinSec.style.display = 'block';
     queueSec.style.display = 'block';
-    refundsSec.style.display = 'none';
     pageTitle.textContent = 'Front-Desk Operations & Arrival Management';
   }
 }
 
-document.querySelectorAll('.nav-item').forEach(link => {
+document.querySelectorAll('.nav-item[data-tab]').forEach(link => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
     switchTab(link.dataset.tab);
   });
 });
+
+// 0.5 Загрузка списка комнат для формы создания бронирования
+async function loadBookingOptions() {
+  const select = document.getElementById('bookingRoomId');
+  if (!select) return;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/rooms`);
+    if (response.ok) {
+      const rooms = await response.json();
+      select.innerHTML = '<option value="">Select a room...</option>';
+      rooms.forEach(room => {
+        const option = document.createElement('option');
+        option.value = room.roomId;
+        option.textContent = `Room ${room.roomNumber} (${room.roomType || 'Standard'} — ${room.cleaningState})`;
+        select.appendChild(option);
+      });
+      return;
+    }
+  } catch (err) {
+    console.warn('Could not load rooms:', err);
+  }
+  select.innerHTML = '<option value="">No rooms available</option>';
+}
+
+// Обработчик создания новой брони (New Booking)
+const bookingForm = document.getElementById('bookingForm');
+if (bookingForm) {
+  bookingForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const passport = document.getElementById('bookingGuestPassport').value.trim().toUpperCase();
+    const roomId = Number(document.getElementById('bookingRoomId').value);
+    const expectedArrival = document.getElementById('bookingExpectedArrival').value;
+    const bookingMsg = document.getElementById('bookingMsg');
+
+    try {
+      const guestsRes = await fetch(`${API_BASE_URL}/guests`);
+      const guests = guestsRes.ok ? await guestsRes.json() : [];
+      const guest = guests.find(g => g.passportNum === passport);
+
+      if (!guest) {
+        bookingMsg.textContent = `❌ Guest with passport ${passport} not found in database.`;
+        bookingMsg.className = 'msg error';
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guestId: guest.guestId,
+          roomId: roomId,
+          expectedArrival: expectedArrival,
+          state: 'CONFIRMED'
+        })
+      });
+
+      if (response.ok) {
+        bookingMsg.textContent = `✓ Booking created for ${guest.firstName} ${guest.lastName}!`;
+        bookingMsg.className = 'msg success';
+        bookingForm.reset();
+        loadPriorityQueue();
+        return;
+      }
+    } catch (err) {
+      console.warn('Booking error:', err);
+    }
+
+    bookingMsg.textContent = '❌ Failed to create booking. Check backend connection.';
+    bookingMsg.className = 'msg error';
+  });
+}
 
 // 1. Загрузка очереди чистых комнат из БД через Backend API
 async function loadPriorityQueue() {
@@ -203,6 +281,7 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
   const refundMsg = document.getElementById('refundMsg');
 
   const payload = {
+    bookingId: bookingId,
     booking: { bookingId: bookingId },
     amount: amount,
     refundReason: reason,
