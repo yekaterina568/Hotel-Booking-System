@@ -25,6 +25,10 @@ spring:
     caffeine:
       spec: "maximumSize=1000,expireAfterWrite=2m,recordStats"
 
+hotel:
+  admin:
+    token: ${HOTEL_ADMIN_TOKEN:}
+
 management:
   endpoints:
     web:

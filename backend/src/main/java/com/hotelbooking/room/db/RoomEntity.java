@@ -5,7 +5,9 @@ import com.hotelbooking.room.model.RoomType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.generator.EventType;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
@@ -19,6 +21,10 @@ public class RoomEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "room_id")
     Long roomId;
+
+    @Generated(event = EventType.INSERT)
+    @Column(name = "hotel_id", nullable = false, insertable = false, updatable = false)
+    Long hotelId;
 
     @Column(name = "room_number")
     Integer roomNumber;
