@@ -8,6 +8,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -37,6 +38,9 @@ public class GuestService {
 
     @CacheEvict(value = "guests", allEntries = true)
     public GuestDto create(GuestEntity guest) {
+        if (guest.getCreatedAt() == null) {
+            guest.setCreatedAt(OffsetDateTime.now());
+        }
         return GuestDto.fromEntity(guestRepository.save(guest));
     }
 

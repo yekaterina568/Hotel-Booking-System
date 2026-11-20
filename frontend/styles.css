@@ -433,7 +433,7 @@ tbody tr:hover {
   margin-left: 6px;
 }
 
-.panel-body:has(> .feedback-banner:empty) {
+#checkout-section .panel-body:has(> .feedback-banner:empty) {
   display: none;
 }
 
