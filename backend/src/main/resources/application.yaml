@@ -37,3 +37,6 @@ management:
 
 server:
   port: 8080
+  error:
+    # Show the reason of a ResponseStatusException (e.g. "room is already booked") to the frontend
+    include-message: always

@@ -6,6 +6,7 @@ import com.hotelbooking.booking.model.BookingDto;
 import com.hotelbooking.booking.model.BookingState;
 import com.hotelbooking.guest.db.GuestEntity;
 import com.hotelbooking.room.db.RoomEntity;
+import com.hotelbooking.room.model.CleaningState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,12 +15,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /** Unit tests for BookingService. The repository is mocked, so no database is needed. */
@@ -30,6 +34,8 @@ class BookingServiceTest {
     private BookingRepository bookingRepository;
 
     private BookingService bookingService;
+    private static final OffsetDateTime ARRIVAL = OffsetDateTime.parse("2026-11-20T14:00:00+05:00");
+
     private GuestEntity guest;
     private RoomEntity room;
 
@@ -41,6 +47,8 @@ class BookingServiceTest {
         guest.setGuestId(1L);
         room = new RoomEntity();
         room.setRoomId(10L);
+        room.setCleaningState(CleaningState.CLEANED);
+        room.setPricePerNight(new BigDecimal("50.00"));
     }
 
     private BookingEntity booking(long id, BookingState state) {
@@ -61,6 +69,7 @@ class BookingServiceTest {
     void create_setsConfirmedStateAndCreatedAt() {
         saveReturnsArgument();
         BookingEntity request = booking(1L, BookingState.CANCELLED); // client tries to send another state
+        request.setExpectedArrival(ARRIVAL);
         request.setCreatedAt(null);
 
         BookingDto result = bookingService.create(request);
@@ -155,5 +164,106 @@ class BookingServiceTest {
         assertEquals(2, result.size());
         assertEquals(1L, (long) result.get(0).bookingId());
         assertEquals(BookingState.CANCELLED, result.get(1).state());
+    }
+
+    // ---------- Reservation: dates and overlapping bookings ----------
+
+    @Test
+    @DisplayName("24. Without a departure date the booking is for one night")
+    void create_withoutDeparture_defaultsToOneNight() {
+        saveReturnsArgument();
+        BookingEntity request = booking(1L, null);
+        request.setExpectedArrival(ARRIVAL);
+
+        BookingDto result = bookingService.create(request);
+
+        assertEquals(ARRIVAL.plusDays(1), result.expectedDeparture());
+        assertEquals(1L, (long) result.nights());
+    }
+
+    @Test
+    @DisplayName("25. Departure before arrival is rejected (400) and nothing is saved")
+    void create_departureBeforeArrival_returns400() {
+        BookingEntity request = booking(1L, null);
+        request.setExpectedArrival(ARRIVAL);
+        request.setExpectedDeparture(ARRIVAL.minusHours(3));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> bookingService.create(request));
+
+        assertEquals(400, ex.getStatusCode().value());
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("26. A room that is already booked for these dates can't be booked again (409)")
+    void create_overlappingBooking_returns409() {
+        BookingEntity request = booking(2L, null);
+        request.setExpectedArrival(ARRIVAL);
+        request.setExpectedDeparture(ARRIVAL.plusDays(3));
+        when(bookingRepository.findOverlapping(eq(10L), anyCollection(), eq(ARRIVAL), eq(ARRIVAL.plusDays(3))))
+                .thenReturn(List.of(booking(1L, BookingState.CONFIRMED)));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> bookingService.create(request));
+
+        assertEquals(409, ex.getStatusCode().value());
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("27. Booking without a guest or room is rejected (400)")
+    void create_withoutRoom_returns400() {
+        BookingEntity request = booking(1L, null);
+        request.setRoom(null);
+        request.setExpectedArrival(ARRIVAL);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> bookingService.create(request));
+
+        assertEquals(400, ex.getStatusCode().value());
+    }
+
+    @Test
+    @DisplayName("28. Total price = nights x price per night")
+    void dto_calculatesNightsAndTotalPrice() {
+        BookingEntity b = booking(1L, BookingState.CONFIRMED);
+        b.setExpectedArrival(ARRIVAL);
+        b.setExpectedDeparture(ARRIVAL.plusDays(3));
+
+        BookingDto dto = BookingDto.fromEntity(b);
+
+        assertEquals(3L, (long) dto.nights());
+        assertEquals(new BigDecimal("150.00"), dto.totalPrice());
+    }
+
+    // ---------- Check-out ----------
+
+    @Test
+    @DisplayName("29. Check-out: booking becomes CHECKEDOUT, room DIRTY, keycards are deactivated")
+    void checkOut_checkedInBooking_becomesCheckedOut() {
+        when(bookingRepository.findById(5L)).thenReturn(Optional.of(booking(5L, BookingState.CHECKEDIN)));
+        saveReturnsArgument();
+
+        BookingDto result = bookingService.checkOut(5L);
+
+        assertEquals(BookingState.CHECKEDOUT, result.state());
+        assertNotNull(result.checkedOutAt());
+        assertEquals(CleaningState.DIRTY, room.getCleaningState());
+        verify(bookingRepository).deactivateKeycards(5L);
+    }
+
+    @Test
+    @DisplayName("30. A guest who hasn't checked in can't check out (409)")
+    void checkOut_confirmedBooking_returns409() {
+        when(bookingRepository.findById(6L)).thenReturn(Optional.of(booking(6L, BookingState.CONFIRMED)));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> bookingService.checkOut(6L));
+
+        assertEquals(409, ex.getStatusCode().value());
+        assertEquals(CleaningState.CLEANED, room.getCleaningState());
+        verify(bookingRepository, never()).save(any());
+        verify(bookingRepository, never()).deactivateKeycards(any());
     }
 }

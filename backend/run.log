@@ -1,0 +1,92 @@
+[INFO] Scanning for projects...
+[INFO] Loaded 24554 auto-discovered prefixes for remote repository central (prefixes-central.txt)
+[INFO] 
+[INFO] --------------------< backend:Hotel-Booking-System >--------------------
+[INFO] Building Hotel-Booking-System 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:4.1.2:run (default-cli) > test-compile @ Hotel-Booking-System >>>
+[INFO] Loaded 64 auto-discovered prefixes for remote repository apache.snapshots (prefixes-apache.snapshots.txt)
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ Hotel-Booking-System ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 6 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ Hotel-Booking-System ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ Hotel-Booking-System ---
+[INFO] skip non existing resourceDirectory /Users/islammeldebek/Hotel-Booking-System/backend/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ Hotel-Booking-System ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< spring-boot:4.1.2:run (default-cli) < test-compile @ Hotel-Booking-System <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:4.1.2:run (default-cli) @ Hotel-Booking-System ---
+[INFO] Loaded 50 auto-discovered prefixes for remote repository ow2-snapshot (prefixes-ow2-snapshot.txt)
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-11-20T11:57:23.641+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] c.hotelbooking.HotelBookingApplication   : Starting HotelBookingApplication using Java 27.0.1.1 with PID 7070 (/Users/islammeldebek/Hotel-Booking-System/backend/target/classes started by islammeldebek in /Users/islammeldebek/Hotel-Booking-System/backend)
+2026-11-20T11:57:23.642+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] c.hotelbooking.HotelBookingApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-11-20T11:57:23.889+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-11-20T11:57:23.907+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 15 ms. Found 8 JPA repository interfaces.
+2026-11-20T11:57:24.067+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+2026-11-20T11:57:24.071+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-11-20T11:57:24.071+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.27]
+2026-11-20T11:57:24.085+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 427 ms
+2026-11-20T11:57:24.154+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-11-20T11:57:24.216+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@987a0bb
+2026-11-20T11:57:24.216+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-11-20T11:57:45.595+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.database                       : Set default schema name to public
+2026-11-20T11:57:46.615+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.changelog                      : Reading from public.databasechangelog
+2026-11-20T11:57:46.635+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.ui                             : Database is up to date, no changesets to execute
+2026-11-20T11:57:46.636+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.changelog                      : Reading from public.databasechangelog
+2026-11-20T11:57:46.638+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.util                           : UPDATE SUMMARY
+2026-11-20T11:57:46.638+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.util                           : Run:                          0
+2026-11-20T11:57:46.638+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.util                           : Previously run:               6
+2026-11-20T11:57:46.638+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.util                           : Filtered out:                 0
+2026-11-20T11:57:46.639+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.util                           : -------------------------------
+2026-11-20T11:57:46.639+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.util                           : Total change sets:            6
+2026-11-20T11:57:46.639+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.util                           : Update summary generated
+2026-11-20T11:57:46.639+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] liquibase.command                        : Command execution complete
+2026-11-20T11:57:46.668+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-11-20T11:57:46.692+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.13.Final
+2026-11-20T11:57:46.806+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-11-20T11:57:46.832+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://localhost:5432/hotel]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.12
+	Default catalog/schema: hotel/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-11-20T11:57:47.140+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-11-20T11:57:47.162+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-11-20T11:57:47.189+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-11-20T11:57:47.439+05:00  WARN 7070 --- [Hotel-Booking-System] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-11-20T11:57:47.585+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-11-20T11:57:47.611+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+2026-11-20T11:57:47.613+05:00  INFO 7070 --- [Hotel-Booking-System] [           main] c.hotelbooking.HotelBookingApplication   : Started HotelBookingApplication in 24.12 seconds (process running for 24.248)
+2026-11-20T11:58:38.315+05:00  INFO 7070 --- [Hotel-Booking-System] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-11-20T11:58:38.315+05:00  INFO 7070 --- [Hotel-Booking-System] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-11-20T11:58:38.319+05:00  INFO 7070 --- [Hotel-Booking-System] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+Hibernate: select re1_0.review_id,re1_0.author_name,re1_0.comment,re1_0.created_at,re1_0.hotel_id,re1_0.rating,re1_0.status from reviews re1_0 order by re1_0.created_at desc,re1_0.review_id desc
+Hibernate: select he1_0.hotel_id,he1_0.address,he1_0.city,he1_0.created_at,he1_0.description,he1_0.name from hotels he1_0 order by he1_0.name,he1_0.hotel_id
+Hibernate: select be1_0.booking_id,be1_0.checked_out_at,be1_0.created_at,be1_0.expected_arrival,be1_0.expected_departure,be1_0.guest_id,be1_0.room_id,be1_0.state from bookings be1_0
+Hibernate: select bae1_0.booking_id,bae1_0.archived_at,bae1_0.checked_out_at,bae1_0.created_at,bae1_0.expected_arrival,bae1_0.expected_departure,bae1_0.guest_id,bae1_0.room_id,bae1_0.state from bookings_archive bae1_0

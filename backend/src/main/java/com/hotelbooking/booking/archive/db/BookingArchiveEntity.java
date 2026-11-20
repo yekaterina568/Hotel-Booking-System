@@ -31,6 +31,12 @@ public class BookingArchiveEntity {
     @Column(name = "expected_arrival")
     OffsetDateTime expectedArrival;
 
+    @Column(name = "expected_departure")
+    OffsetDateTime expectedDeparture;
+
+    @Column(name = "checked_out_at")
+    OffsetDateTime checkedOutAt;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "state")

@@ -43,7 +43,7 @@ class BookingControllerTest {
     }
 
     private BookingDto dto(long id, BookingState state) {
-        return new BookingDto(id, 1L, 10L, ARRIVAL, state, null);
+        return new BookingDto(id, 1L, 10L, ARRIVAL, ARRIVAL.plusDays(2), 2L, null, state, null, null);
     }
 
     @Test
@@ -98,6 +98,44 @@ class BookingControllerTest {
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Only a confirmed booking can be cancelled"));
 
         mockMvc.perform(post("/api/bookings/5/cancel"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("21. POST /api/bookings/{id}/check-out returns the booking in state CHECKEDOUT")
+    void checkOut_returnsCheckedOutBooking() throws Exception {
+        when(bookingService.checkOut(7L)).thenReturn(dto(7L, BookingState.CHECKEDOUT));
+
+        mockMvc.perform(post("/api/bookings/7/check-out"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value(7))
+                .andExpect(jsonPath("$.state").value("CHECKEDOUT"))
+                .andExpect(jsonPath("$.nights").value(2));
+    }
+
+    @Test
+    @DisplayName("22. POST /api/bookings/{id}/check-out for a guest who isn't checked in returns 409")
+    void checkOut_notCheckedIn_returns409() throws Exception {
+        when(bookingService.checkOut(8L))
+                .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Only a checked-in guest can check out"));
+
+        mockMvc.perform(post("/api/bookings/8/check-out"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("23. POST /api/bookings for a room that is already taken returns 409")
+    void create_overlappingBooking_returns409() throws Exception {
+        when(bookingService.create(any(BookingEntity.class)))
+                .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Room is already booked"));
+
+        mockMvc.perform(post("/api/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"guest": {"guestId": 1}, "room": {"roomId": 10},
+                                 "expectedArrival": "2026-11-20T14:00:00+05:00",
+                                 "expectedDeparture": "2026-11-22T12:00:00+05:00"}
+                                """))
                 .andExpect(status().isConflict());
     }
 }

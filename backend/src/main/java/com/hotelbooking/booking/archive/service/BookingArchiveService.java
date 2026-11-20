@@ -62,6 +62,8 @@ public class BookingArchiveService {
         archived.setGuest(booking.getGuest());
         archived.setRoom(booking.getRoom());
         archived.setExpectedArrival(booking.getExpectedArrival());
+        archived.setExpectedDeparture(booking.getExpectedDeparture());
+        archived.setCheckedOutAt(booking.getCheckedOutAt());
         archived.setState(BookingState.ARCHIVED);
         archived.setCreatedAt(booking.getCreatedAt());
         archived.setArchivedAt(OffsetDateTime.now());

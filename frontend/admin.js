@@ -24,6 +24,7 @@ function displayAmount(amount) {
 function displayStatus(status) {
   if (status == null) return '—';
   if (status === 'CHECKEDIN') return 'Checked in';
+  if (status === 'CHECKEDOUT') return 'Checked out';
   return status.charAt(0) + status.slice(1).toLowerCase();
 }
 
@@ -37,6 +38,9 @@ const bookingColumns = [
   ['Room ID', 'roomId', displayId],
   ['Status', 'state', displayStatus],
   ['Expected arrival', 'expectedArrival', displayDateTime],
+  ['Expected departure', 'expectedDeparture', displayDateTime],
+  ['Total', 'totalPrice', displayAmount],
+  ['Checked out', 'checkedOutAt', displayDateTime],
   ['Created', 'createdAt', displayDateTime]
 ];
 

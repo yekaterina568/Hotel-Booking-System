@@ -22,6 +22,7 @@
         <a href="#checkin-section" data-tab="checkin" class="nav-item active">Arrivals & Check-in</a>
         <a href="#refunds-section" data-tab="refunds" class="nav-item">Billing & Refunds</a>
         <a href="#booking-section" data-tab="booking" class="nav-item">New Booking</a>
+        <a href="#checkout-section" data-tab="checkout" class="nav-item">Departures & Check-out</a>
         <a href="admin.html" class="nav-item">Administration</a>
       </nav>
 
@@ -45,30 +46,49 @@
           <div class="panel-header">
             <div>
               <h2>Create a Booking</h2>
-              <p class="panel-desc">Enter the passport of a registered guest, choose a room, and set the expected arrival time.</p>
+              <p class="panel-desc">Enter the passport of a registered guest and the stay dates. Only rooms that are free for the whole stay are offered.</p>
             </div>
           </div>
 
           <div class="panel-body">
-            <form id="bookingForm" class="grid-form">
+            <form id="bookingForm" class="grid-form booking-form">
               <div class="field-group">
                 <label for="bookingGuestPassport">Guest Passport</label>
                 <input type="text" id="bookingGuestPassport" placeholder="Passport / ID number" maxlength="20" autocomplete="off" required />
               </div>
               <div class="field-group">
-                <label for="bookingRoomId">Room</label>
-                <select id="bookingRoomId" required>
-                  <option value="">Loading rooms...</option>
-                </select>
+                <label for="bookingExpectedArrival">Check-in (arrival)</label>
+                <input type="datetime-local" id="bookingExpectedArrival" required />
               </div>
               <div class="field-group">
-                <label for="bookingExpectedArrival">Expected Arrival</label>
-                <input type="datetime-local" id="bookingExpectedArrival" required />
+                <label for="bookingExpectedDeparture">Check-out (departure)</label>
+                <input type="datetime-local" id="bookingExpectedDeparture" required />
+              </div>
+              <div class="field-group">
+                <label for="bookingRoomType">Room type</label>
+                <select id="bookingRoomType">
+                  <option value="">Any type</option>
+                  <option value="SINGLE">Single</option>
+                  <option value="DOUBLE">Double</option>
+                  <option value="TWIN">Twin</option>
+                  <option value="TRIPLE">Triple</option>
+                  <option value="FAMILY">Family</option>
+                  <option value="SUITE">Suite</option>
+                  <option value="DELUXE">Deluxe</option>
+                  <option value="PRESIDENTIAL">Presidential</option>
+                </select>
+              </div>
+              <div class="field-group span-2">
+                <label for="bookingRoomId">Free room for these dates</label>
+                <select id="bookingRoomId" required>
+                  <option value="">Choose check-in and check-out dates first</option>
+                </select>
               </div>
               <div class="field-action">
                 <button type="submit" class="btn btn-primary">Create Booking</button>
               </div>
             </form>
+            <div id="bookingSummary" class="booking-summary"></div>
             <div id="bookingMsg" class="feedback-banner"></div>
           </div>
         </section>
@@ -166,6 +186,40 @@
                 </tr>
               </thead>
               <tbody id="refundsTbody">
+                <!-- Populated by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <!-- Section 4: Departures & Check-out -->
+        <section id="checkout-section" class="panel" style="display: none;">
+          <div class="panel-header">
+            <div>
+              <h2>In-House Guests & Check-out</h2>
+              <p class="panel-desc">Guests who are checked in. Check-out frees the room, sends it to housekeeping as Dirty and deactivates the guest's keycards.</p>
+            </div>
+            <button id="refreshCheckoutsBtn" class="btn badge-neutral" type="button">Refresh</button>
+          </div>
+
+          <div class="panel-body border-bottom">
+            <div id="checkoutMsg" class="feedback-banner"></div>
+          </div>
+
+          <div class="table-container">
+            <table id="checkoutTable">
+              <thead>
+                <tr>
+                  <th>Booking Ref</th>
+                  <th>Guest</th>
+                  <th>Room</th>
+                  <th>Arrival</th>
+                  <th>Departure</th>
+                  <th>Nights</th>
+                  <th>Total</th>
+                  <th class="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="checkoutTbody">
                 <!-- Populated by app.js -->
               </tbody>
             </table>

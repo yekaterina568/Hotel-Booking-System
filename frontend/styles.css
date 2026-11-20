@@ -404,3 +404,39 @@ tbody tr:hover {
   color: var(--success-text);
   border: 1px solid var(--success-border);
 }
+/* Reservation form with dates */
+.booking-form {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.booking-form .span-2 {
+  grid-column: span 2;
+}
+
+.booking-summary {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.badge-overdue {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid var(--danger-border);
+  margin-left: 6px;
+}
+
+.badge-today {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  margin-left: 6px;
+}
+
+.panel-body:has(> .feedback-banner:empty) {
+  display: none;
+}
+
+#checkoutTable .btn-assign {
+  white-space: nowrap;
+}

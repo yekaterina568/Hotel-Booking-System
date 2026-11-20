@@ -13,6 +13,7 @@ function switchTab(tabName) {
   const queueSec = document.getElementById('priority-queue-section');
   const refundsSec = document.getElementById('refunds-section');
   const bookingSec = document.getElementById('booking-section');
+  const checkoutSec = document.getElementById('checkout-section');
   const pageTitle = document.getElementById('pageTitle');
   const navItems = document.querySelectorAll('.nav-item[data-tab]');
 
@@ -24,6 +25,7 @@ function switchTab(tabName) {
   queueSec.style.display = 'none';
   refundsSec.style.display = 'none';
   bookingSec.style.display = 'none';
+  checkoutSec.style.display = 'none';
 
   if (tabName === 'refunds') {
     refundsSec.style.display = 'block';
@@ -31,6 +33,10 @@ function switchTab(tabName) {
   } else if (tabName === 'booking') {
     bookingSec.style.display = 'block';
     pageTitle.textContent = 'New Reservation & Room Assignment';
+  } else if (tabName === 'checkout') {
+    checkoutSec.style.display = 'block';
+    pageTitle.textContent = 'Departures & Check-out';
+    loadCheckouts();
   } else {
     checkinSec.style.display = 'block';
     queueSec.style.display = 'block';
@@ -45,29 +51,112 @@ document.querySelectorAll('.nav-item[data-tab]').forEach(link => {
   });
 });
 
-// 0.5 Загрузка списка комнат для формы создания бронирования
-async function loadBookingOptions() {
+// 0.5 Reservation: поиск свободных номеров на выбранные даты
+const moneyFormat = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const dateFormat = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+
+function formatDate(value) {
+  return value ? dateFormat.format(new Date(value)) : '—';
+}
+
+// datetime-local даёт время без часового пояса ("2026-11-20T14:00"), а бэкенду нужен ISO с поясом
+function toIsoWithZone(localValue) {
+  return localValue ? new Date(localValue).toISOString() : null;
+}
+
+function countNights(arrival, departure) {
+  const a = new Date(arrival);
+  const d = new Date(departure);
+  const startA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  const startD = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.max(Math.round((startD - startA) / 86400000), 1);
+}
+
+let availableRooms = [];
+
+async function readError(response, fallback) {
+  try {
+    const body = await response.json();
+    return body.message || body.detail || body.error || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function loadAvailableRooms() {
   const select = document.getElementById('bookingRoomId');
+  const arrival = document.getElementById('bookingExpectedArrival').value;
+  const departure = document.getElementById('bookingExpectedDeparture').value;
+  const roomType = document.getElementById('bookingRoomType').value;
   if (!select) return;
 
+  availableRooms = [];
+  updateBookingSummary();
+
+  if (!arrival || !departure) {
+    select.innerHTML = '<option value="">Choose check-in and check-out dates first</option>';
+    return;
+  }
+  if (new Date(departure) <= new Date(arrival)) {
+    select.innerHTML = '<option value="">Check-out must be after check-in</option>';
+    return;
+  }
+
+  select.innerHTML = '<option value="">Searching free rooms...</option>';
+  const params = new URLSearchParams({ from: toIsoWithZone(arrival), to: toIsoWithZone(departure) });
+  if (roomType) params.append('roomType', roomType);
+
   try {
-    const response = await fetch(`${API_BASE_URL}/rooms`);
+    const response = await fetch(`${API_BASE_URL}/rooms/available?${params}`);
     if (response.ok) {
-      const rooms = await response.json();
-      select.innerHTML = '<option value="">Select a room...</option>';
-      rooms.forEach(room => {
+      availableRooms = await response.json();
+      if (availableRooms.length === 0) {
+        select.innerHTML = '<option value="">No free rooms for these dates</option>';
+        return;
+      }
+      select.innerHTML = `<option value="">${availableRooms.length} free room(s) — select one...</option>`;
+      availableRooms.forEach(room => {
         const option = document.createElement('option');
         option.value = room.roomId;
-        option.textContent = `Room ${room.roomNumber} (${room.roomType || 'Standard'} — ${room.cleaningState})`;
+        const price = room.pricePerNight == null ? '' : ` · ${moneyFormat.format(room.pricePerNight)}/night`;
+        option.textContent = `Room ${room.roomNumber} (${room.roomType || 'Standard'})${price}`;
         select.appendChild(option);
       });
       return;
     }
   } catch (err) {
-    console.warn('Could not load rooms:', err);
+    console.warn('Could not load free rooms:', err);
   }
-  select.innerHTML = '<option value="">No rooms available</option>';
+  select.innerHTML = '<option value="">Could not load rooms — is the backend running?</option>';
 }
+
+// Подсказка под формой: сколько ночей и сколько это будет стоить
+function updateBookingSummary() {
+  const summary = document.getElementById('bookingSummary');
+  if (!summary) return;
+  const arrival = document.getElementById('bookingExpectedArrival').value;
+  const departure = document.getElementById('bookingExpectedDeparture').value;
+  const roomId = Number(document.getElementById('bookingRoomId').value);
+  const room = availableRooms.find(r => r.roomId === roomId);
+
+  if (!arrival || !departure || new Date(departure) <= new Date(arrival)) {
+    summary.textContent = '';
+    return;
+  }
+  const nights = countNights(arrival, departure);
+  if (room && room.pricePerNight != null) {
+    summary.textContent = `${nights} night(s) × ${moneyFormat.format(room.pricePerNight)} = ${moneyFormat.format(nights * room.pricePerNight)}`;
+  } else {
+    summary.textContent = `${nights} night(s)`;
+  }
+}
+
+['bookingExpectedArrival', 'bookingExpectedDeparture', 'bookingRoomType'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', loadAvailableRooms);
+});
+const bookingRoomSelect = document.getElementById('bookingRoomId');
+if (bookingRoomSelect) bookingRoomSelect.addEventListener('change', updateBookingSummary);
 
 // Обработчик создания новой брони (New Booking)
 const bookingForm = document.getElementById('bookingForm');
@@ -76,8 +165,15 @@ if (bookingForm) {
     e.preventDefault();
     const passport = document.getElementById('bookingGuestPassport').value.trim().toUpperCase();
     const roomId = Number(document.getElementById('bookingRoomId').value);
-    const expectedArrival = document.getElementById('bookingExpectedArrival').value;
+    const arrival = document.getElementById('bookingExpectedArrival').value;
+    const departure = document.getElementById('bookingExpectedDeparture').value;
     const bookingMsg = document.getElementById('bookingMsg');
+
+    if (new Date(departure) <= new Date(arrival)) {
+      bookingMsg.textContent = '❌ Check-out must be after check-in.';
+      bookingMsg.className = 'feedback-banner error';
+      return;
+    }
 
     try {
       const guestsRes = await fetch(`${API_BASE_URL}/guests`);
@@ -86,7 +182,7 @@ if (bookingForm) {
 
       if (!guest) {
         bookingMsg.textContent = `❌ Guest with passport ${passport} not found in database.`;
-        bookingMsg.className = 'msg error';
+        bookingMsg.className = 'feedback-banner error';
         return;
       }
 
@@ -94,26 +190,36 @@ if (bookingForm) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          guestId: guest.guestId,
-          roomId: roomId,
-          expectedArrival: expectedArrival,
-          state: 'CONFIRMED'
+          guest: { guestId: guest.guestId },
+          room: { roomId: roomId },
+          expectedArrival: toIsoWithZone(arrival),
+          expectedDeparture: toIsoWithZone(departure)
         })
       });
 
       if (response.ok) {
-        bookingMsg.textContent = `✓ Booking created for ${guest.firstName} ${guest.lastName}!`;
-        bookingMsg.className = 'msg success';
+        const booking = await response.json();
+        const room = availableRooms.find(r => r.roomId === roomId);
+        const nights = booking.nights ?? countNights(arrival, departure);
+        bookingMsg.textContent = `✓ Booking #${booking.bookingId} created for ${guest.firstName} ${guest.lastName}: ` +
+          `Room ${room ? room.roomNumber : roomId}, ${nights} night(s).`;
+        bookingMsg.className = 'feedback-banner success';
         bookingForm.reset();
+        loadAvailableRooms();
         loadPriorityQueue();
         return;
       }
+
+      bookingMsg.textContent = `❌ ${await readError(response, 'Failed to create booking.')}`;
+      bookingMsg.className = 'feedback-banner error';
+      if (response.status === 409) loadAvailableRooms();
+      return;
     } catch (err) {
       console.warn('Booking error:', err);
     }
 
     bookingMsg.textContent = '❌ Failed to create booking. Check backend connection.';
-    bookingMsg.className = 'msg error';
+    bookingMsg.className = 'feedback-banner error';
   });
 }
 
@@ -201,7 +307,7 @@ document.getElementById('validateBtn').addEventListener('click', async () => {
 
   if (!passportRegex.test(passportVal)) {
     msg.textContent = '❌ Error: Invalid passport format. Expected 7 to 12 alphanumeric characters.';
-    msg.className = 'msg error';
+    msg.className = 'feedback-banner error';
     return;
   }
 
@@ -212,12 +318,12 @@ document.getElementById('validateBtn').addEventListener('click', async () => {
       const guest = guests.find(item => item.passportNum === passportVal);
       if (!guest) {
         msg.textContent = `❌ Passport ${passportVal} was not found in the database.`;
-        msg.className = 'msg error';
+        msg.className = 'feedback-banner error';
         return;
       }
 
       msg.textContent = `✓ Verified in DB: Guest ${guest.firstName} ${guest.lastName} (Passport: ${passportVal})`;
-      msg.className = 'msg success';
+      msg.className = 'feedback-banner success';
       return;
     }
   } catch (err) {
@@ -225,7 +331,7 @@ document.getElementById('validateBtn').addEventListener('click', async () => {
   }
 
   msg.textContent = `✓ Passport ${passportVal} passed format validation & DB lookup.`;
-  msg.className = 'msg success';
+  msg.className = 'feedback-banner success';
 });
 
 // 4. Загрузка списка возвратов из таблицы Refunds в БД
@@ -297,7 +403,7 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
 
     if (response.ok) {
       refundMsg.textContent = `✓ Refund of $${amount.toFixed(2)} for Booking #${bookingId} saved to Database!`;
-      refundMsg.className = 'msg success';
+      refundMsg.className = 'feedback-banner success';
       document.getElementById('refundForm').reset();
       loadRefunds();
       return;
@@ -314,7 +420,7 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
     status: 'COMPLETED'
   });
   refundMsg.textContent = `✓ Refund of $${amount.toFixed(2)} for Booking #${bookingId} processed!`;
-  refundMsg.className = 'msg success';
+  refundMsg.className = 'feedback-banner success';
   document.getElementById('refundForm').reset();
   loadRefunds();
 });
@@ -333,7 +439,7 @@ async function cancelRefund(refundId) {
 
     if (response.ok) {
       refundMsg.textContent = `✓ Refund #${refundId} cancelled and removed from Database!`;
-      refundMsg.className = 'msg success';
+      refundMsg.className = 'feedback-banner success';
       loadRefunds();
       return;
     }
@@ -343,11 +449,101 @@ async function cancelRefund(refundId) {
 
   localRefunds = localRefunds.filter(r => (r.refundId ?? r.refund_id) !== refundId);
   refundMsg.textContent = `✓ Refund #${refundId} cancelled!`;
-  refundMsg.className = 'msg success';
+  refundMsg.className = 'feedback-banner success';
   loadRefunds();
 }
 
+// 7. Check-out: список заселённых гостей и выселение
+async function loadCheckouts() {
+  const tbody = document.getElementById('checkoutTbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#888;">Loading...</td></tr>';
+
+  try {
+    const [bookingsResponse, roomsResponse, guestsResponse] = await Promise.all([
+      fetch(`${API_BASE_URL}/bookings`),
+      fetch(`${API_BASE_URL}/rooms`),
+      fetch(`${API_BASE_URL}/guests`)
+    ]);
+    if (!bookingsResponse.ok || !roomsResponse.ok || !guestsResponse.ok) throw new Error('API error');
+
+    const [bookings, rooms, guests] = await Promise.all([
+      bookingsResponse.json(), roomsResponse.json(), guestsResponse.json()
+    ]);
+
+    const inHouse = bookings
+      .filter(b => b.state === 'CHECKEDIN')
+      .sort((x, y) => new Date(x.expectedDeparture ?? 0) - new Date(y.expectedDeparture ?? 0));
+
+    if (inHouse.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#888;">No checked-in guests right now.</td></tr>';
+      return;
+    }
+
+    const today = new Date().toDateString();
+    tbody.innerHTML = '';
+    inHouse.forEach(b => {
+      const room = rooms.find(r => r.roomId === b.roomId);
+      const guest = guests.find(g => g.guestId === b.guestId);
+      const guestName = guest ? `${guest.firstName} ${guest.lastName}` : `Guest #${b.guestId}`;
+      const roomLabel = room ? room.roomNumber : b.roomId;
+
+      let departureBadge = '';
+      if (b.expectedDeparture) {
+        const dep = new Date(b.expectedDeparture);
+        if (dep < new Date()) departureBadge = '<span class="badge badge-overdue">Overdue</span>';
+        else if (dep.toDateString() === today) departureBadge = '<span class="badge badge-today">Today</span>';
+      }
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>#${b.bookingId}</td>
+        <td>${guestName}</td>
+        <td><strong>No. ${roomLabel}</strong></td>
+        <td>${formatDate(b.expectedArrival)}</td>
+        <td>${formatDate(b.expectedDeparture)}${departureBadge}</td>
+        <td>${b.nights ?? '—'}</td>
+        <td>${b.totalPrice == null ? '—' : moneyFormat.format(b.totalPrice)}</td>
+        <td class="text-right">
+          <button class="btn-assign" onclick="checkOutBooking(${b.bookingId}, '${String(roomLabel)}')">Check-out</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.warn('Could not load in-house guests:', err);
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#888;">Backend is offline — cannot load guests.</td></tr>';
+  }
+}
+
+async function checkOutBooking(bookingId, roomNumber) {
+  if (!confirm(`Check out booking #${bookingId} from Room No. ${roomNumber}?`)) return;
+
+  const msg = document.getElementById('checkoutMsg');
+  try {
+    const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/check-out`, { method: 'POST' });
+    if (response.ok) {
+      const booking = await response.json();
+      const total = booking.totalPrice == null ? '' : ` Amount due: ${moneyFormat.format(booking.totalPrice)}.`;
+      msg.textContent = `✓ Booking #${bookingId} checked out. Room No. ${roomNumber} sent to housekeeping (Dirty), keycards deactivated.${total}`;
+      msg.className = 'feedback-banner success';
+      loadCheckouts();
+      loadPriorityQueue();
+      return;
+    }
+    msg.textContent = `❌ ${await readError(response, 'Check-out failed.')}`;
+    msg.className = 'feedback-banner error';
+    return;
+  } catch (err) {
+    console.warn('Check-out error:', err);
+  }
+  msg.textContent = '❌ Check-out failed. Check backend connection.';
+  msg.className = 'feedback-banner error';
+}
+
+const refreshCheckoutsBtn = document.getElementById('refreshCheckoutsBtn');
+if (refreshCheckoutsBtn) refreshCheckoutsBtn.addEventListener('click', loadCheckouts);
+
 // Инициализация при открытии страницы
-loadBookingOptions();
 loadPriorityQueue();
 loadRefunds();

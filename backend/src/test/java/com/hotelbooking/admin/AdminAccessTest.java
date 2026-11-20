@@ -1,6 +1,7 @@
 package com.hotelbooking.admin;
 
 import com.hotelbooking.booking.archive.service.BookingArchiveService;
+import com.hotelbooking.booking.service.AvailabilityService;
 import com.hotelbooking.booking.service.BookingService;
 import com.hotelbooking.guest.service.GuestService;
 import com.hotelbooking.hotel.controller.HotelAdminController;
@@ -66,6 +67,9 @@ class AdminAccessTest {
 
     @MockitoBean
     private BookingService bookings;
+
+    @MockitoBean
+    private AvailabilityService availability;
 
     @MockitoBean
     private BookingArchiveService archive;
