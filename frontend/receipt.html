@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receipt — Grand Almaty PMS</title>
+  <style>
+    body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: #f3f4f6; color: #111827; margin: 0; padding: 32px 16px; }
+    .toolbar { max-width: 560px; margin: 0 auto 16px; display: flex; justify-content: space-between; align-items: center; }
+    .toolbar button, .toolbar a { font-size: 13px; padding: 8px 14px; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; color: #111827; cursor: pointer; text-decoration: none; }
+    .receipt { max-width: 560px; margin: 0 auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 32px; }
+    .receipt h1 { font-size: 20px; margin: 0 0 4px; }
+    .receipt .sub { color: #6b7280; font-size: 13px; margin-bottom: 20px; }
+    .receipt .kind { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .04em; padding: 3px 10px; border-radius: 999px; background: #ecfdf5; color: #047857; }
+    .receipt .kind.refund { background: #fef2f2; color: #b91c1c; }
+    table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 14px; }
+    td { padding: 8px 0; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+    td:first-child { color: #6b7280; width: 45%; }
+    td:last-child { text-align: right; font-weight: 500; }
+    tr.total td { border-bottom: 0; border-top: 2px solid #111827; font-size: 16px; font-weight: 700; color: #111827; padding-top: 12px; }
+    .foot { margin-top: 22px; font-size: 12px; color: #6b7280; text-align: center; }
+    #error { max-width: 560px; margin: 0 auto; padding: 14px; background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 8px; display: none; }
+    @media print { body { background: #fff; padding: 0; } .toolbar { display: none; } .receipt { border: 0; } }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <a href="index.html">← Back to portal</a>
+    <button type="button" onclick="window.print()">Print</button>
+  </div>
+  <div id="error"></div>
+  <div id="receipt" class="receipt" style="display:none"></div>
+  <script src="receipt.js"></script>
+</body>
+</html>
