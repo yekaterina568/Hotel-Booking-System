@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="auth.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="payments.js" defer></script>
 </head>
 <body>
   <main id="loginPanel" class="auth-page">
@@ -41,6 +42,7 @@
 
       <nav class="nav-menu">
         <a href="#checkin-section" data-tab="checkin" class="nav-item active">Arrivals & Check-in</a>
+        <a href="#payments-section" data-tab="payments" class="nav-item">Payments</a>
         <a href="#refunds-section" data-tab="refunds" class="nav-item">Billing & Refunds</a>
         <a href="#booking-section" data-tab="booking" class="nav-item">New Booking</a>
         <a href="#checkout-section" data-tab="checkout" class="nav-item">Departures & Check-out</a>
@@ -160,6 +162,62 @@
               </thead>
               <tbody id="queueTbody">
                 <!-- Populated by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Section: Payments -->
+        <section id="payments-section" class="panel" style="display: none;">
+          <div class="panel-header">
+            <div>
+              <h2>Guest Payments</h2>
+              <p class="panel-desc">Amount due is calculated as nights × room rate. Leave the amount empty to pay the whole balance. Refunds issued in Billing & Refunds are deducted automatically.</p>
+            </div>
+          </div>
+
+          <div class="panel-body border-bottom">
+            <form id="paymentForm" class="grid-form">
+              <div class="field-group">
+                <label for="paymentBookingId">Booking ID</label>
+                <input type="number" id="paymentBookingId" placeholder="1" min="1" required />
+              </div>
+              <div class="field-group">
+                <label for="paymentAmount">Amount (USD)</label>
+                <input type="number" id="paymentAmount" placeholder="empty = full balance" step="0.01" min="0.01" />
+              </div>
+              <div class="field-group">
+                <label for="paymentMethod">Payment Method</label>
+                <select id="paymentMethod" required>
+                  <option value="CARD">Card</option>
+                  <option value="CASH">Cash</option>
+                  <option value="TRANSFER">Bank transfer</option>
+                </select>
+              </div>
+              <div class="field-action">
+                <button type="submit" id="paymentSubmit" class="btn btn-primary">Accept Payment</button>
+              </div>
+            </form>
+            <div id="paymentBalance" class="feedback-banner"></div>
+            <div id="paymentMsg" class="feedback-banner"></div>
+          </div>
+
+          <div class="table-container">
+            <table id="paymentsTable">
+              <thead>
+                <tr>
+                  <th>Payment ID</th>
+                  <th>Booking Ref</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Status</th>
+                  <th>Transaction</th>
+                  <th>Date</th>
+                  <th class="text-right">Receipt</th>
+                </tr>
+              </thead>
+              <tbody id="paymentsTbody">
+                <!-- Populated by payments.js -->
               </tbody>
             </table>
           </div>

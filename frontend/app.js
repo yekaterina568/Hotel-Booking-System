@@ -12,6 +12,7 @@ function switchTab(tabName) {
   const refundsSec = document.getElementById('refunds-section');
   const bookingSec = document.getElementById('booking-section');
   const checkoutSec = document.getElementById('checkout-section');
+  const paymentsSec = document.getElementById('payments-section');
   const pageTitle = document.getElementById('pageTitle');
   const navItems = document.querySelectorAll('.nav-item[data-tab]');
 
@@ -24,8 +25,13 @@ function switchTab(tabName) {
   refundsSec.style.display = 'none';
   bookingSec.style.display = 'none';
   checkoutSec.style.display = 'none';
+  paymentsSec.style.display = 'none';
 
-  if (tabName === 'refunds') {
+  if (tabName === 'payments') {
+    paymentsSec.style.display = 'block';
+    pageTitle.textContent = 'Guest Payments & Receipts';
+    if (window.loadPaymentsTab) window.loadPaymentsTab();
+  } else if (tabName === 'refunds') {
     refundsSec.style.display = 'block';
     pageTitle.textContent = 'Billing & Refund Management';
   } else if (tabName === 'booking') {

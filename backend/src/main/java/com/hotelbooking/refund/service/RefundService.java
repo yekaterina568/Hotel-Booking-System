@@ -2,12 +2,15 @@ package com.hotelbooking.refund.service;
 
 import com.hotelbooking.refund.db.RefundEntity;
 import com.hotelbooking.refund.db.RefundRepository;
+import com.hotelbooking.payment.service.PaymentService;
 import com.hotelbooking.refund.model.RefundDto;
+import com.hotelbooking.refund.model.RefundState;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -17,9 +20,11 @@ import java.util.List;
 public class RefundService {
 
     private final RefundRepository refundRepository;
+    private final PaymentService paymentService;
 
-    public RefundService(RefundRepository refundRepository) {
+    public RefundService(RefundRepository refundRepository, PaymentService paymentService) {
         this.refundRepository = refundRepository;
+        this.paymentService = paymentService;
     }
 
     @Cacheable("refunds")
@@ -38,9 +43,18 @@ public class RefundService {
                         HttpStatus.NOT_FOUND, "Refund not found: " + id));
     }
 
+    /**
+     * Сохраняет возврат; если он завершён (COMPLETED), в той же транзакции записывает его
+     * в платёжный журнал (payments, статус REFUNDED), чтобы баланс брони учитывал возврат.
+     */
+    @Transactional
     @CacheEvict(value = "refunds", allEntries = true)
     public RefundDto create(RefundEntity refund) {
-        RefundDto created = RefundDto.fromEntity(refundRepository.save(refund));
+        RefundEntity saved = refundRepository.save(refund);
+        if (saved.getState() == RefundState.COMPLETED) {
+            paymentService.recordRefund(saved);
+        }
+        RefundDto created = RefundDto.fromEntity(saved);
         log.info("Created refund id={}", created.refundId());
         return created;
     }
