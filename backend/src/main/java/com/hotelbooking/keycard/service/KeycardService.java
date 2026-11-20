@@ -3,6 +3,7 @@ package com.hotelbooking.keycard.service;
 import com.hotelbooking.keycard.db.KeycardEntity;
 import com.hotelbooking.keycard.db.KeycardRepository;
 import com.hotelbooking.keycard.model.KeycardDto;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @Service
+@Slf4j
 public class KeycardService {
 
     private final KeycardRepository keycardRepository;
@@ -38,7 +40,9 @@ public class KeycardService {
 
     @CacheEvict(value = "keycards", allEntries = true)
     public KeycardDto create(KeycardEntity keycard) {
-        return KeycardDto.fromEntity(keycardRepository.save(keycard));
+        KeycardDto created = KeycardDto.fromEntity(keycardRepository.save(keycard));
+        log.info("Created keycard id={}", created.keycardId());
+        return created;
     }
 
     @CacheEvict(value = "keycards", allEntries = true)
@@ -47,5 +51,6 @@ public class KeycardService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Keycard not found: " + id);
         }
         keycardRepository.deleteById(id);
+        log.info("Deleted keycard id={}", id);
     }
 }

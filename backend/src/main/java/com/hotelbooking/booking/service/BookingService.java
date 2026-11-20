@@ -5,6 +5,7 @@ import com.hotelbooking.booking.db.BookingRepository;
 import com.hotelbooking.booking.model.BookingDto;
 import com.hotelbooking.booking.model.BookingState;
 import com.hotelbooking.room.model.CleaningState;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
+@Slf4j
 public class BookingService {
 
     /** States in which a booking occupies its room. */
@@ -76,7 +78,9 @@ public class BookingService {
         booking.setState(BookingState.CONFIRMED);
         booking.setCreatedAt(OffsetDateTime.now());
         booking.setCheckedOutAt(null);
-        return BookingDto.fromEntity(bookingRepository.save(booking));
+        BookingDto created = BookingDto.fromEntity(bookingRepository.save(booking));
+        log.info("Created booking id={}", created.bookingId());
+        return created;
     }
 
     @CacheEvict(value = "bookings", allEntries = true)
@@ -87,7 +91,9 @@ public class BookingService {
                     "Заселить можно только подтверждённую бронь");
         }
         booking.setState(BookingState.CHECKEDIN);
-        return BookingDto.fromEntity(bookingRepository.save(booking));
+        BookingDto checkedIn = BookingDto.fromEntity(bookingRepository.save(booking));
+        log.info("Checked in booking id={}", id);
+        return checkedIn;
     }
 
     /**
@@ -108,7 +114,9 @@ public class BookingService {
             booking.getRoom().setCleaningState(CleaningState.DIRTY);
         }
         bookingRepository.deactivateKeycards(id);
-        return BookingDto.fromEntity(bookingRepository.save(booking));
+        BookingDto checkedOut = BookingDto.fromEntity(bookingRepository.save(booking));
+        log.info("Checked out booking id={}", id);
+        return checkedOut;
     }
 
     @CacheEvict(value = "bookings", allEntries = true)
@@ -119,6 +127,8 @@ public class BookingService {
                     "Отменить можно только подтверждённую бронь");
         }
         booking.setState(BookingState.CANCELLED);
-        return BookingDto.fromEntity(bookingRepository.save(booking));
+        BookingDto cancelled = BookingDto.fromEntity(bookingRepository.save(booking));
+        log.info("Cancelled booking id={}", id);
+        return cancelled;
     }
 }

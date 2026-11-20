@@ -3,6 +3,7 @@ package com.hotelbooking.refund.service;
 import com.hotelbooking.refund.db.RefundEntity;
 import com.hotelbooking.refund.db.RefundRepository;
 import com.hotelbooking.refund.model.RefundDto;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @Service
+@Slf4j
 public class RefundService {
 
     private final RefundRepository refundRepository;
@@ -38,7 +40,9 @@ public class RefundService {
 
     @CacheEvict(value = "refunds", allEntries = true)
     public RefundDto create(RefundEntity refund) {
-        return RefundDto.fromEntity(refundRepository.save(refund));
+        RefundDto created = RefundDto.fromEntity(refundRepository.save(refund));
+        log.info("Created refund id={}", created.refundId());
+        return created;
     }
 
     @CacheEvict(value = "refunds", allEntries = true)
@@ -47,5 +51,6 @@ public class RefundService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Refund not found: " + id);
         }
         refundRepository.deleteById(id);
+        log.info("Deleted refund id={}", id);
     }
 }

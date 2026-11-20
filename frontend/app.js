@@ -1,5 +1,3 @@
-const API_BASE_URL = 'http://localhost:8080/api';
-
 let localQueue = [
   { booking_id: 101, full_name: 'Aruzhan Tanatar', room_number: 101, expected_arrival: '14:00', cleaning_status: 'Cleaned' }
 ];
@@ -107,7 +105,7 @@ async function loadAvailableRooms() {
   if (roomType) params.append('roomType', roomType);
 
   try {
-    const response = await fetch(`${API_BASE_URL}/rooms/available?${params}`);
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/rooms/available?${params}`);
     if (response.ok) {
       availableRooms = await response.json();
       if (availableRooms.length === 0) {
@@ -176,7 +174,7 @@ if (bookingForm) {
     }
 
     try {
-      const guestsRes = await fetch(`${API_BASE_URL}/guests`);
+      const guestsRes = await hotelAuth.fetch(`${API_BASE_URL}/guests`);
       const guests = guestsRes.ok ? await guestsRes.json() : [];
       const guest = guests.find(g => g.passportNum === passport);
 
@@ -186,7 +184,7 @@ if (bookingForm) {
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/bookings`, {
+      const response = await hotelAuth.fetch(`${API_BASE_URL}/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -231,9 +229,9 @@ async function loadPriorityQueue() {
   let queueData = localQueue;
   try {
     const [bookingsResponse, roomsResponse, guestsResponse] = await Promise.all([
-      fetch(`${API_BASE_URL}/bookings`),
-      fetch(`${API_BASE_URL}/rooms`),
-      fetch(`${API_BASE_URL}/guests`)
+      hotelAuth.fetch(`${API_BASE_URL}/bookings`),
+      hotelAuth.fetch(`${API_BASE_URL}/rooms`),
+      hotelAuth.fetch(`${API_BASE_URL}/guests`)
     ]);
 
     if (bookingsResponse.ok && roomsResponse.ok && guestsResponse.ok) {
@@ -284,7 +282,7 @@ async function loadPriorityQueue() {
 // 2. Отправка запроса на автоматическое заселение (POST в БД)
 async function autoAssign(bookingId, roomNumber) {
   try {
-    const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/check-in`, {
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/bookings/${bookingId}/check-in`, {
       method: 'POST'
     });
 
@@ -312,7 +310,7 @@ document.getElementById('validateBtn').addEventListener('click', async () => {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/guests`);
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/guests`);
     if (response.ok) {
       const guests = await response.json();
       const guest = guests.find(item => item.passportNum === passportVal);
@@ -341,7 +339,7 @@ async function loadRefunds() {
 
   let refundsData = localRefunds;
   try {
-    const response = await fetch(`${API_BASE_URL}/refunds`);
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/refunds`);
     if (response.ok) {
       refundsData = await response.json();
     }
@@ -395,7 +393,7 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
   };
 
   try {
-    const response = await fetch(`${API_BASE_URL}/refunds`, {
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/refunds`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -433,7 +431,7 @@ async function cancelRefund(refundId) {
 
   const refundMsg = document.getElementById('refundMsg');
   try {
-    const response = await fetch(`${API_BASE_URL}/refunds/${refundId}`, {
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/refunds/${refundId}`, {
       method: 'DELETE'
     });
 
@@ -461,9 +459,9 @@ async function loadCheckouts() {
 
   try {
     const [bookingsResponse, roomsResponse, guestsResponse] = await Promise.all([
-      fetch(`${API_BASE_URL}/bookings`),
-      fetch(`${API_BASE_URL}/rooms`),
-      fetch(`${API_BASE_URL}/guests`)
+      hotelAuth.fetch(`${API_BASE_URL}/bookings`),
+      hotelAuth.fetch(`${API_BASE_URL}/rooms`),
+      hotelAuth.fetch(`${API_BASE_URL}/guests`)
     ]);
     if (!bookingsResponse.ok || !roomsResponse.ok || !guestsResponse.ok) throw new Error('API error');
 
@@ -521,7 +519,7 @@ async function checkOutBooking(bookingId, roomNumber) {
 
   const msg = document.getElementById('checkoutMsg');
   try {
-    const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/check-out`, { method: 'POST' });
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/bookings/${bookingId}/check-out`, { method: 'POST' });
     if (response.ok) {
       const booking = await response.json();
       const total = booking.totalPrice == null ? '' : ` Amount due: ${moneyFormat.format(booking.totalPrice)}.`;
@@ -544,6 +542,12 @@ async function checkOutBooking(bookingId, roomNumber) {
 const refreshCheckoutsBtn = document.getElementById('refreshCheckoutsBtn');
 if (refreshCheckoutsBtn) refreshCheckoutsBtn.addEventListener('click', loadCheckouts);
 
-// Инициализация при открытии страницы
-loadPriorityQueue();
-loadRefunds();
+window.addEventListener('hotel-authenticated', () => {
+  loadPriorityQueue();
+  loadRefunds();
+});
+
+if (hotelAuth.getCredentials()) {
+  loadPriorityQueue();
+  loadRefunds();
+}

@@ -1,6 +1,10 @@
 spring:
   application:
     name: Hotel-Booking-System
+  security:
+    user:
+      name: ${HOTEL_AUTH_USERNAME}
+      password: ${HOTEL_AUTH_PASSWORD}
   datasource:
     url: jdbc:postgresql://localhost:5432/${POSTGRES_DB}
     username: ${POSTGRES_USER}
@@ -24,10 +28,6 @@ spring:
       - refunds
     caffeine:
       spec: "maximumSize=1000,expireAfterWrite=2m,recordStats"
-
-hotel:
-  admin:
-    token: ${HOTEL_ADMIN_TOKEN:}
 
 management:
   endpoints:

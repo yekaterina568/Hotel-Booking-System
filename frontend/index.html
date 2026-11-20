@@ -5,9 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hotel PMS — Front-Desk Operations</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="auth.js" defer></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
-  <div class="app-layout">
+  <main id="loginPanel" class="auth-page">
+    <section class="panel auth-panel" aria-labelledby="loginHeading">
+      <h1 id="loginHeading">Sign in</h1>
+      <p class="panel-desc">Enter your system username and password to continue.</p>
+      <form id="frontDeskSignInForm">
+        <div class="field-group">
+          <label for="frontDeskUsername">Username</label>
+          <input id="frontDeskUsername" name="username" autocomplete="username" required>
+        </div>
+        <div class="field-group">
+          <label for="frontDeskPassword">Password</label>
+          <input id="frontDeskPassword" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Sign in</button>
+        <p id="frontDeskSignInFeedback" class="feedback-banner" role="status"></p>
+      </form>
+    </section>
+  </main>
+
+  <div class="app-layout" hidden>
     <!-- Left Navigation Sidebar -->
     <aside class="sidebar">
       <div class="brand">
@@ -35,6 +56,7 @@
     <div class="main-wrapper">
       <header class="topbar">
         <div id="pageTitle" class="page-title">Front-Desk Operations & Arrival Management</div>
+        <button id="frontDeskSignOut" class="btn btn-secondary" type="button">Sign out</button>
         <div class="system-status">
           <span class="status-dot"></span> System Online
         </div>
@@ -229,6 +251,5 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
 </body>
 </html>

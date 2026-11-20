@@ -31,10 +31,49 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-page[hidden] {
+  display: none;
+}
+
+.auth-panel {
+  width: min(100%, 420px);
+  padding: 26px;
+}
+
+.auth-panel form {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.auth-panel h1 {
+  font-size: 24px;
+}
+
+.auth-panel .panel-desc {
+  margin-top: 6px;
+  color: var(--text-secondary);
+}
+
+.auth-panel .feedback-banner:not(:empty) {
+  margin-top: 0;
+}
+
 /* Layout */
 .app-layout {
   display: flex;
   min-height: 100vh;
+}
+
+.app-layout[hidden] {
+  display: none;
 }
 
 /* Sidebar */
@@ -286,6 +325,16 @@ select:focus {
 
 .btn-primary:hover {
   background-color: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background: #f3f4f6;
 }
 
 .btn-danger {
