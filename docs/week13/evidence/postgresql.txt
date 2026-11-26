@@ -1,0 +1,61 @@
+Pager usage is off.
+Database, collected after the final browser run
+  database   |    postgresql
+-------------+------------------
+ week13_demo | 14.18 (Homebrew)
+(1 row)
+
+Applied Liquibase changesets
+ execution_order |               id                | exectype
+-----------------+---------------------------------+----------
+               1 | 001                             | EXECUTED
+               2 | 002-align-enum-values-with-java | EXECUTED
+               3 | 003-seed-demo-rooms             | EXECUTED
+               4 | 004-add-hotels-and-reviews      | EXECUTED
+               5 | 005-add-checkedout-state        | EXECUTED
+               6 | 005-add-stay-dates              | EXECUTED
+               7 | week13-room-number-per-hotel    | EXECUTED
+               8 | week13-booking-status-history   | EXECUTED
+(8 rows)
+
+Current inventory and all-time activity
+ hotels | rooms | guests | bookings | refunds | avg_published_rating
+--------+-------+--------+----------+---------+----------------------
+      3 |    13 |     42 |       45 |      13 |                 3.68
+(1 row)
+
+   state    | count
+------------+-------
+ CONFIRMED  |     9
+ CHECKEDIN  |     9
+ CHECKEDOUT |     9
+ CANCELLED  |     8
+ ARCHIVED   |    10
+(5 rows)
+
+Riverside cancelled bookings matching the browser report
+ booking_id | room_number |   state
+------------+-------------+-----------
+         18 |         101 | CANCELLED
+         28 |         102 | CANCELLED
+         38 |         103 | CANCELLED
+          8 |         103 | CANCELLED
+(4 rows)
+
+Room created and edited in the browser
+ room_id |        hotel        | room_number | room_type | cleaning_state | price_per_night
+---------+---------------------+-------------+-----------+----------------+-----------------
+      13 | Summit Hotel (Demo) |      990256 | SUITE     | CLEANED        |          199.75
+(1 row)
+
+Front-desk reservation cancelled and archived in administration
+ booking_id |  state   |     archived_at_almaty
+------------+----------+----------------------------
+         45 | ARCHIVED | 2026-11-26 22:18:43.609847
+(1 row)
+
+ booking_id | previous_state | new_state |     changed_at_almaty
+------------+----------------+-----------+----------------------------
+         45 | CONFIRMED      | CANCELLED | 2026-11-26 22:18:43.08769
+         45 | CANCELLED      | ARCHIVED  | 2026-11-26 22:18:43.611657
+(2 rows)

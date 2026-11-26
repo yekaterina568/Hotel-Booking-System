@@ -1,0 +1,8 @@
+Chromium 158.0.8127.88
+PASS Admin rejected the wrong password, opened Dashboard, and rendered all six charts.
+PASS Hotel, last-seven-days, all-time, empty and invalid custom filters and backend recovery behaved as expected.
+PASS Filtered report preview, CSV download, and printable HTML returned the same matching records.
+PASS Room 13 (990256) was created, moved, repriced, and confirmed after reload.
+PASS Front-desk reservation #45, admin cancellation, archive, and history persisted.
+PASS Existing hotel add/delete and pending/published/hidden moderation worked.
+PASS Sign-out, 390px mobile dashboard and reports, and zero uncaught JavaScript errors.
