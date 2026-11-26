@@ -117,7 +117,8 @@ async function loadAvailableRooms() {
         const option = document.createElement('option');
         option.value = room.roomId;
         const price = room.pricePerNight == null ? '' : ` · ${moneyFormat.format(room.pricePerNight)}/night`;
-        option.textContent = `Room ${room.roomNumber} (${room.roomType || 'Standard'})${price}`;
+        const hotel = room.hotelId == null ? '' : ` · Hotel #${room.hotelId}`;
+        option.textContent = `Room ${room.roomNumber} (${room.roomType || 'Standard'})${hotel}${price}`;
         select.appendChild(option);
       });
       return;

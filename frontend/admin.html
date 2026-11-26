@@ -7,7 +7,11 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="admin.css">
   <script src="auth.js" defer></script>
+  <script src="admin-insights.js" defer></script>
+  <script src="admin-management.js" defer></script>
   <script src="admin.js" defer></script>
+  <script id="chartLibrary" src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+    integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous" async></script>
 </head>
 <body class="admin-page">
   <div class="app-layout">
@@ -21,14 +25,16 @@
       </div>
       <nav class="nav-menu" aria-label="Administration">
         <div id="adminNav" class="admin-nav" hidden>
-          <a href="#hotels" class="nav-item" aria-current="page">Hotels</a>
+          <a href="#dashboard" class="nav-item" aria-current="page">Dashboard</a>
+          <a href="#hotels" class="nav-item">Hotels</a>
           <a href="#rooms" class="nav-item">Rooms</a>
           <a href="#guests" class="nav-item">Guests</a>
           <a href="#bookings" class="nav-item">Bookings</a>
-          <a href="#booking-archive" class="nav-item">Booking archive</a>
+          <a href="#booking-archive" class="nav-item">Booking Archive</a>
           <a href="#refunds" class="nav-item">Refunds</a>
           <a href="#keycards" class="nav-item">Keycards</a>
           <a href="#reviews" class="nav-item">Reviews <span id="navPending" class="nav-count" hidden></span></a>
+          <a href="#reports" class="nav-item">Reports</a>
         </div>
         <a href="index.html" class="nav-item front-desk-link">← Front desk</a>
       </nav>
@@ -52,36 +58,132 @@
               <label for="adminPassword">Password</label>
               <input type="password" id="adminPassword" autocomplete="current-password" required>
             </div>
-            <button type="submit" class="btn btn-primary">Sign in</button>
+            <button type="submit" class="btn btn-primary" disabled>Sign in</button>
             <p id="signInFeedback" class="feedback-banner" role="status"></p>
           </form>
         </section>
 
         <div id="dashboard" hidden>
           <div class="admin-heading">
-            <h1 id="dashboardHeading" tabindex="-1">Hotels</h1>
+            <h1 id="dashboardHeading" tabindex="-1">Dashboard</h1>
             <div class="heading-actions">
               <button id="refreshData" class="btn btn-secondary" type="button">Refresh</button>
               <button id="addRecord" class="btn btn-primary" type="button">Add hotel</button>
             </div>
           </div>
 
-          <div id="adminMetrics" class="admin-metrics">
-            <div class="panel metric">
-              <span>Hotels</span>
-              <strong id="hotelCount">0</strong>
-            </div>
-            <div class="panel metric">
-              <span>Pending reviews</span>
-              <strong id="pendingCount">0</strong>
-            </div>
-            <div class="panel metric">
-              <span>Average published rating</span>
-              <strong id="averageRating">—</strong>
-            </div>
-          </div>
-
           <p id="dashboardFeedback" class="feedback-banner" role="status"></p>
+
+          <section id="overviewPanel" aria-labelledby="dashboardHeading" hidden>
+            <form id="dashboardFilters" class="panel insights-filters">
+              <div class="field-group">
+                <label for="dashboardHotel">Hotel</label>
+                <select id="dashboardHotel" name="hotelId"></select>
+              </div>
+              <div class="field-group">
+                <label for="dashboardPeriod">Activity period</label>
+                <select id="dashboardPeriod" name="period">
+                  <option value="LAST_7_DAYS">Last 7 days</option>
+                  <option value="LAST_30_DAYS" selected>Last 30 days</option>
+                  <option value="ALL_TIME">All time</option>
+                  <option value="CUSTOM">Custom date range</option>
+                </select>
+              </div>
+              <div class="field-group" data-custom-date hidden>
+                <label for="dashboardFrom">From</label>
+                <input id="dashboardFrom" name="from" type="date" disabled>
+              </div>
+              <div class="field-group" data-custom-date hidden>
+                <label for="dashboardTo">Through</label>
+                <input id="dashboardTo" name="to" type="date" disabled>
+              </div>
+              <button type="submit" class="btn btn-primary">Apply filters</button>
+            </form>
+            <p id="overviewFeedback" class="feedback-banner" role="status"></p>
+            <div id="overviewData" hidden>
+              <section class="dashboard-group" aria-labelledby="inventoryHeading">
+                <div class="insights-heading">
+                  <h2 id="inventoryHeading">Current inventory</h2>
+                  <p>Hotel filter only. Guests for one hotel are those with a booking there.</p>
+                </div>
+                <div id="inventoryMetrics" class="dashboard-metrics"></div>
+              </section>
+              <section class="dashboard-group" aria-labelledby="activityHeading">
+                <div class="insights-heading">
+                  <h2 id="activityHeading">Activity</h2>
+                  <p id="activityDates"></p>
+                </div>
+                <div id="activityMetrics" class="dashboard-metrics"></div>
+                <p id="refundDateNote" class="insights-note" hidden></p>
+              </section>
+              <section class="dashboard-group" aria-labelledby="statisticsHeading">
+                <div class="insights-heading">
+                  <h2 id="statisticsHeading">Statistics</h2>
+                  <p>Bookings and reviews use their creation date. Refunds use the processed date. Room cleaning shows current inventory.</p>
+                </div>
+                <div id="dashboardCharts" class="chart-grid"></div>
+              </section>
+            </div>
+          </section>
+
+          <section id="reportsPanel" aria-labelledby="dashboardHeading" hidden>
+            <form id="reportFilters" class="panel insights-filters">
+              <div class="field-group">
+                <label for="reportType">Report</label>
+                <select id="reportType" name="type">
+                  <option value="BOOKINGS">Booking report</option>
+                  <option value="ROOMS">Room inventory report</option>
+                  <option value="HOTELS">Hotel performance report</option>
+                  <option value="REFUNDS">Refund report</option>
+                  <option value="REVIEWS">Guest review report</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="reportHotel">Hotel</label>
+                <select id="reportHotel" name="hotelId"></select>
+              </div>
+              <div class="field-group">
+                <label id="reportStatusLabel" for="reportStatus">Status</label>
+                <select id="reportStatus" name="status"></select>
+              </div>
+              <div class="field-group" data-report-date>
+                <label for="reportFrom">From</label>
+                <input id="reportFrom" name="from" type="date">
+              </div>
+              <div class="field-group" data-report-date>
+                <label for="reportTo">Through</label>
+                <input id="reportTo" name="to" type="date">
+              </div>
+              <button type="submit" class="btn btn-primary">Generate preview</button>
+            </form>
+            <p id="reportDateNote" class="insights-note"></p>
+            <p id="reportFeedback" class="feedback-banner" role="status"></p>
+            <section id="reportPreview" class="panel admin-records" aria-labelledby="reportTitle" hidden>
+              <div class="report-preview-header">
+                <div><h2 id="reportTitle"></h2><p id="reportGenerated" class="insights-note"></p></div>
+                <div class="heading-actions">
+                  <button type="button" id="downloadReport" class="btn btn-secondary">Download CSV</button>
+                  <button type="button" id="printReport" class="btn btn-secondary">Print / Save PDF</button>
+                </div>
+              </div>
+              <dl id="reportMetadata" class="report-values" aria-label="Report filters"></dl>
+              <dl id="reportSummary" class="report-values report-totals" aria-label="Report summary"></dl>
+              <div class="table-container" role="region" aria-label="Report preview table" tabindex="0">
+                <table role="table">
+                  <thead role="rowgroup"><tr id="reportColumns"></tr></thead>
+                  <tbody id="reportRows" role="rowgroup"></tbody>
+                </table>
+              </div>
+              <div class="records-footer">
+                <p id="reportResults" class="records-count" role="status"></p>
+                <nav id="reportPages" class="pagination" aria-label="Report pages" hidden>
+                  <button id="previousReportPage" type="button" class="btn btn-secondary">Previous</button>
+                  <span id="reportPageNumber"></span>
+                  <button id="nextReportPage" type="button" class="btn btn-secondary">Next</button>
+                </nav>
+              </div>
+            </section>
+          </section>
 
           <section id="hotelPanel" class="panel admin-records" aria-labelledby="hotelPanelHeading">
             <div class="records-toolbar">
@@ -154,7 +256,11 @@
               <div class="operation-filters">
                 <div class="field-group">
                   <label id="operationSearchLabel" for="operationSearch">Search records</label>
-                  <input id="operationSearch" type="search">
+                  <input id="operationSearch" type="search" maxlength="100">
+                </div>
+                <div id="operationHotelField" class="field-group" hidden>
+                  <label for="operationHotel">Hotel</label>
+                  <select id="operationHotel"></select>
                 </div>
                 <div id="operationStatusField" class="field-group">
                   <label id="operationStatusLabel" for="operationStatus">Status</label>
@@ -249,6 +355,52 @@
     </form>
   </dialog>
 
+  <dialog id="roomDialog" aria-labelledby="roomDialogHeading">
+    <form id="roomForm">
+      <h2 id="roomDialogHeading">Add room</h2>
+      <div class="dialog-fields">
+        <div class="field-group">
+          <label for="roomHotel">Hotel</label>
+          <select id="roomHotel" name="hotelId" required autofocus></select>
+        </div>
+        <div class="field-group">
+          <label for="roomNumber">Room number</label>
+          <input id="roomNumber" name="roomNumber" type="number" min="1" max="2147483647" step="1" required>
+        </div>
+        <div class="field-group">
+          <label for="roomType">Room type</label>
+          <select id="roomType" name="roomType" required></select>
+        </div>
+        <div class="field-group">
+          <label for="roomCleaning">Cleaning status</label>
+          <select id="roomCleaning" name="cleaningState" required></select>
+        </div>
+        <div class="field-group">
+          <label for="roomPrice">Price per night</label>
+          <input id="roomPrice" name="pricePerNight" type="number" min="0" max="99999999.99" step="0.01" required>
+        </div>
+      </div>
+      <p class="feedback-banner" role="status"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save room</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="bookingDialog" aria-labelledby="bookingDialogHeading">
+    <h2 id="bookingDialogHeading">Booking details</h2>
+    <p id="bookingDialogStatus" class="feedback-banner" role="status"></p>
+    <div id="bookingDetailContent" hidden>
+      <dl id="bookingDetailValues" class="report-values"></dl>
+      <h3>Status history</h3>
+      <ol id="bookingHistory" class="booking-history"></ol>
+    </div>
+    <div class="dialog-actions">
+      <form method="dialog"><button type="submit" class="btn btn-secondary" autofocus>Close</button></form>
+    </div>
+  </dialog>
+
   <dialog id="deleteDialog" aria-labelledby="deleteHeading" aria-describedby="deleteDescription">
     <form id="deleteForm">
       <h2 id="deleteHeading"></h2>
@@ -256,7 +408,7 @@
       <p class="feedback-banner" role="status"></p>
       <div class="dialog-actions">
         <button type="button" class="btn btn-secondary" data-close autofocus>Cancel</button>
-        <button type="submit" class="btn btn-danger">Delete</button>
+        <button type="submit" id="confirmRecordAction" class="btn btn-danger">Delete</button>
       </div>
     </form>
   </dialog>
