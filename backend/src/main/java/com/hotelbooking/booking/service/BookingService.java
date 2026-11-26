@@ -48,6 +48,12 @@ public class BookingService {
                         HttpStatus.NOT_FOUND, "Booking not found: " + id));
     }
 
+    private BookingEntity lockById(Long id) {
+        return bookingRepository.lockById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Booking not found: " + id));
+    }
+
     @Transactional
     @CacheEvict(value = "bookings", allEntries = true)
     public BookingDto create(BookingEntity booking) {
@@ -83,9 +89,10 @@ public class BookingService {
         return created;
     }
 
+    @Transactional
     @CacheEvict(value = "bookings", allEntries = true)
     public BookingDto checkIn(Long id) {
-        BookingEntity booking = findEntityById(id);
+        BookingEntity booking = lockById(id);
         if (booking.getState() != BookingState.CONFIRMED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Заселить можно только подтверждённую бронь");
@@ -103,7 +110,7 @@ public class BookingService {
     @Transactional
     @CacheEvict(value = {"bookings", "rooms", "keycards"}, allEntries = true)
     public BookingDto checkOut(Long id) {
-        BookingEntity booking = findEntityById(id);
+        BookingEntity booking = lockById(id);
         if (booking.getState() != BookingState.CHECKEDIN) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Выселить можно только заселённого гостя");
@@ -119,9 +126,10 @@ public class BookingService {
         return checkedOut;
     }
 
+    @Transactional
     @CacheEvict(value = "bookings", allEntries = true)
     public BookingDto cancel(Long id) {
-        BookingEntity booking = findEntityById(id);
+        BookingEntity booking = lockById(id);
         if (booking.getState() != BookingState.CONFIRMED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Отменить можно только подтверждённую бронь");

@@ -5,6 +5,7 @@ spring:
     user:
       name: ${HOTEL_AUTH_USERNAME}
       password: ${HOTEL_AUTH_PASSWORD}
+      roles: ADMIN
   datasource:
     url: jdbc:postgresql://localhost:5432/${POSTGRES_DB}
     username: ${POSTGRES_USER}
@@ -40,3 +41,7 @@ server:
   error:
     # Show the reason of a ResponseStatusException (e.g. "room is already booked") to the frontend
     include-message: always
+
+hotel:
+  reporting-zone: ${HOTEL_REPORTING_ZONE:Asia/Almaty}
+  frontend-origins: ${HOTEL_FRONTEND_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}

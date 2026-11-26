@@ -18,6 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
@@ -46,6 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         AdminRecordsController.class, AuthController.class},
         properties = {"spring.security.user.name=admin-access-test", "spring.security.user.password=test-password"})
 @Import(SecurityConfig.class)
+@ImportAutoConfiguration({SecurityAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class})
 class AdminAccessTest {
     private static final String AUTHORIZATION = "Basic " + Base64.getEncoder().encodeToString(
             "admin-access-test:test-password".getBytes(StandardCharsets.UTF_8));

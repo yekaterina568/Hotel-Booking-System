@@ -58,7 +58,7 @@ class BookingArchiveServiceTest {
     @DisplayName("9. Archiving a cancelled booking copies it to the archive and marks it ARCHIVED")
     void archive_cancelledBooking_copiesAndMarksArchived() {
         BookingEntity b = booking(5L, BookingState.CANCELLED);
-        when(bookingRepository.findById(5L)).thenReturn(Optional.of(b));
+        when(bookingRepository.lockById(5L)).thenReturn(Optional.of(b));
         when(archiveRepository.save(any(BookingArchiveEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         BookingArchiveDto result = archiveService.archive(5L);
@@ -75,7 +75,7 @@ class BookingArchiveServiceTest {
     @Test
     @DisplayName("10. An active (CONFIRMED) booking can't be archived (409)")
     void archive_confirmedBooking_returns409() {
-        when(bookingRepository.findById(5L)).thenReturn(Optional.of(booking(5L, BookingState.CONFIRMED)));
+        when(bookingRepository.lockById(5L)).thenReturn(Optional.of(booking(5L, BookingState.CONFIRMED)));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> archiveService.archive(5L));
@@ -87,7 +87,7 @@ class BookingArchiveServiceTest {
     @Test
     @DisplayName("11. A booking can't be archived twice (409)")
     void archive_alreadyArchived_returns409() {
-        when(bookingRepository.findById(5L)).thenReturn(Optional.of(booking(5L, BookingState.ARCHIVED)));
+        when(bookingRepository.lockById(5L)).thenReturn(Optional.of(booking(5L, BookingState.ARCHIVED)));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> archiveService.archive(5L));
@@ -99,7 +99,7 @@ class BookingArchiveServiceTest {
     @Test
     @DisplayName("12. Archiving an unknown booking gives 404")
     void archive_unknownBooking_returns404() {
-        when(bookingRepository.findById(99L)).thenReturn(Optional.empty());
+        when(bookingRepository.lockById(99L)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> archiveService.archive(99L));
