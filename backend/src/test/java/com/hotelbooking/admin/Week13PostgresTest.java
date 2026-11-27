@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.security.core.userdetails.User;
@@ -24,16 +25,20 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @EnabledIfEnvironmentVariable(named = "WEEK13_TEST_JDBC_URL", matches = "jdbc:postgresql:.*")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class Week13PostgresTest {
+    private static final String MERGED_CHANGELOG = "db.changelog-master.yaml";
     private static final String ADMIN = "week13-admin:integration-only";
     private static final String CLERK = "week13-clerk:integration-only";
     private static final String FORMULA_HOTEL = "  =SUM(1,2) \"Гостиница\" <script>";
@@ -57,17 +62,8 @@ class Week13PostgresTest {
 
     @DynamicPropertySource
     static void postgres(DynamicPropertyRegistry properties) throws Exception {
-        String url = System.getenv("WEEK13_TEST_JDBC_URL");
-        String user = System.getenv().getOrDefault("POSTGRES_USER", "postgres");
-        String password = System.getenv().getOrDefault("POSTGRES_PASSWORD", "");
-        new JdbcTemplate(new DriverManagerDataSource(url, user, password)).execute("CREATE SCHEMA " + SCHEMA);
-        String isolatedUrl = url + (url.contains("?") ? "&" : "?") + "currentSchema=" + SCHEMA;
-        var dataSource = new DriverManagerDataSource(isolatedUrl, user, password);
-        var baseline = new SpringLiquibase();
-        baseline.setDataSource(dataSource);
-        baseline.setDefaultSchema(SCHEMA);
-        baseline.setChangeLog("classpath:db/changelog/week13-upgrade-baseline.yaml");
-        baseline.afterPropertiesSet();
+        var dataSource = newSchema(SCHEMA);
+        migrate(dataSource, SCHEMA, "week13-upgrade-feature.yaml");
 
         var baselineDb = new JdbcTemplate(dataSource);
         baselineDb.update("INSERT INTO guests (passport_num, first_name, last_name, phone_num) VALUES ('BASE01','Old','Guest','000')");
@@ -79,20 +75,104 @@ class Week13PostgresTest {
                 INSERT INTO bookings_archive (booking_id, guest_id, room_id, state, expected_arrival)
                 SELECT booking_id, guest_id, room_id, state, expected_arrival FROM bookings
                 """);
-        properties.add("spring.datasource.url", () -> isolatedUrl);
-        properties.add("spring.datasource.username", () -> user);
-        properties.add("spring.datasource.password", () -> password);
+        insertOverlapChain(baselineDb);
+        properties.add("spring.datasource.url", dataSource::getUrl);
+        properties.add("spring.datasource.username", dataSource::getUsername);
+        properties.add("spring.datasource.password", dataSource::getPassword);
         properties.add("spring.liquibase.default-schema", () -> SCHEMA);
         properties.add("hotel.reporting-zone", () -> "Asia/Almaty");
+    }
+
+    private static DriverManagerDataSource newSchema(String schema) {
+        String url = System.getenv("WEEK13_TEST_JDBC_URL");
+        String user = System.getenv().getOrDefault("POSTGRES_USER", "postgres");
+        String password = System.getenv().getOrDefault("POSTGRES_PASSWORD", "");
+        new JdbcTemplate(new DriverManagerDataSource(url, user, password)).execute("CREATE SCHEMA " + schema);
+        String isolatedUrl = url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema + ",public";
+        return new DriverManagerDataSource(isolatedUrl, user, password);
+    }
+
+    private static void migrate(DriverManagerDataSource source, String schema, String changelog) throws Exception {
+        var liquibase = new SpringLiquibase();
+        liquibase.setDataSource(source);
+        liquibase.setDefaultSchema(schema);
+        liquibase.setChangeLog("classpath:db/changelog/" + changelog);
+        liquibase.afterPropertiesSet();
+    }
+
+    private static void insertOverlapChain(JdbcTemplate database) {
+        database.update("""
+                INSERT INTO bookings (guest_id, room_id, state, expected_arrival, expected_departure)
+                SELECT 1, room_id, stay.state::booking_state_enum, stay.arrival::timestamptz, stay.departure::timestamptz
+                FROM rooms CROSS JOIN (VALUES
+                    (1, 'CONFIRMED', '2026-03-01T00:00:00Z', '2026-03-03T00:00:00Z'),
+                    (2, 'CHECKEDIN', '2026-03-02T00:00:00Z', '2026-03-04T00:00:00Z'),
+                    (3, 'CONFIRMED', '2026-03-03T00:00:00Z', '2026-03-05T00:00:00Z'),
+                    (4, 'CONFIRMED', '2026-03-05T00:00:00Z', '2026-03-06T00:00:00Z')
+                ) stay(sequence, state, arrival, departure)
+                WHERE room_number = 101 ORDER BY stay.sequence
+                """);
     }
 
     @BeforeAll
     void additiveMigrationKeepsPreviouslyAppliedChangesetsAndLegacyRows() {
         assertThat(db.queryForObject("SELECT count(*) FROM rooms WHERE hotel_id = 1", Long.class)).isEqualTo(4);
         assertThat(db.queryForObject("SELECT count(*) FROM bookings_archive WHERE state = 'ARCHIVED'", Long.class)).isEqualTo(1);
-        assertThat(db.queryForObject("SELECT count(*) FROM booking_status_history", Long.class)).isZero();
-        assertThat(db.queryForObject("SELECT count(*) FROM databasechangelog WHERE id LIKE 'week13-%'", Long.class)).isEqualTo(2);
-        assertThat(db.queryForObject("SELECT count(*) FROM databasechangelog WHERE id NOT LIKE 'week13-%'", Long.class)).isEqualTo(6);
+        assertThat(db.queryForList("SELECT booking_id FROM bookings WHERE cancelled_at IS NOT NULL ORDER BY booking_id", Long.class))
+                .containsExactly(3L, 4L);
+        assertThat(db.queryForList("""
+                SELECT previous_state || ' → ' || new_state FROM booking_status_history ORDER BY booking_id
+                """, String.class)).containsExactly("CHECKEDIN → CANCELLED", "CONFIRMED → CANCELLED");
+        assertThat(db.queryForObject("""
+                SELECT expected_departure = expected_arrival + interval '1 day' FROM bookings WHERE booking_id = 1
+                """, Boolean.class)).isTrue();
+        assertMergedChangesets(db);
+    }
+
+    @Test
+    void existingMainUpgradeDoesNotRepeatCancellationOrInventHistory() throws Exception {
+        String schema = SCHEMA + "_main";
+        var source = newSchema(schema);
+        migrate(source, schema, "week13-upgrade-baseline.yaml");
+        var database = new JdbcTemplate(source);
+        database.update("INSERT INTO guests (passport_num, first_name, last_name, phone_num) VALUES ('BASE01','Old','Guest','000')");
+        insertOverlapChain(database);
+        migrate(source, schema, "week13-upgrade-main.yaml");
+        var cancellations = database.queryForList("""
+                SELECT booking_id, cancelled_at FROM bookings WHERE cancelled_at IS NOT NULL ORDER BY booking_id
+                """);
+        assertThat(cancellations).hasSize(2);
+        migrate(source, schema, MERGED_CHANGELOG);
+        assertThat(database.queryForList("""
+                SELECT booking_id, cancelled_at FROM bookings WHERE cancelled_at IS NOT NULL ORDER BY booking_id
+                """)).isEqualTo(cancellations);
+        assertThat(database.queryForObject("SELECT count(*) FROM booking_status_history", Long.class)).isZero();
+        assertMergedChangesets(database);
+    }
+
+    @Test
+    void freshInstallAppliesBothFeatures() throws Exception {
+        String schema = SCHEMA + "_fresh";
+        var source = newSchema(schema);
+        migrate(source, schema, MERGED_CHANGELOG);
+        var database = new JdbcTemplate(source);
+        assertMergedChangesets(database);
+        assertThat(database.queryForObject("""
+                SELECT count(*) FROM rooms r JOIN hotels h USING (hotel_id)
+                """, Long.class)).isEqualTo(4);
+    }
+
+    private static void assertMergedChangesets(JdbcTemplate database) {
+        assertThat(database.queryForObject("SELECT count(*) FROM databasechangelog", Long.class)).isEqualTo(12);
+        assertThat(database.queryForList("""
+                SELECT conname FROM pg_constraint
+                WHERE connamespace = current_schema()::regnamespace
+                  AND conname IN ('excl_bookings_room_no_overlap', 'uq_rooms_hotel_number')
+                """, String.class)).containsExactlyInAnyOrder("excl_bookings_room_no_overlap", "uq_rooms_hotel_number");
+        assertThat(database.queryForObject("""
+                SELECT count(*) FROM pg_trigger
+                WHERE tgrelid = 'bookings'::regclass AND tgname = 'booking_status_changed'
+                """, Long.class)).isEqualTo(1);
     }
 
     @BeforeEach
@@ -193,8 +273,8 @@ class Week13PostgresTest {
     void reportAndBookingPagesReadOnlyTheirPageButCsvIncludesEveryMatchingRow() throws Exception {
         seed();
         db.update("""
-                INSERT INTO bookings (guest_id, room_id, state, expected_arrival)
-                SELECT 1, 1, 'CANCELLED', now() FROM generate_series(1, 60)
+                INSERT INTO bookings (guest_id, room_id, state, expected_arrival, expected_departure)
+                SELECT 1, 1, 'CANCELLED', now(), now() + interval '1 day' FROM generate_series(1, 60)
                 """);
         var preview = get("/api/admin/reports?type=BOOKINGS&status=CANCELLED&page=2");
         assertThat(preview.get("total").asInt()).isEqualTo(61);
@@ -290,6 +370,45 @@ class Week13PostgresTest {
         assertThat(get("/api/admin/bookings/2").at("/history/0/newState").asString()).isEqualTo("CHECKEDOUT");
     }
 
+    @Test
+    void mergedBookingRulesAndRefundsUseTheSameCancellationAsAdminHistory() throws Exception {
+        seed();
+        var arrival = OffsetDateTime.now().plusDays(12).truncatedTo(ChronoUnit.HOURS);
+        var departure = arrival.plusDays(2);
+        String body = """
+                {"guest":{"guestId":1},"room":{"roomId":1},"expectedArrival":"%s","expectedDeparture":"%s"}
+                """.formatted(arrival, departure);
+        var reservation = request("POST", "/api/bookings", body, CLERK);
+        assertThat(reservation.statusCode()).isEqualTo(201);
+        long id = JSON.readTree(reservation.body()).get("bookingId").asLong();
+        assertThat(request("POST", "/api/bookings", body, CLERK).statusCode()).isEqualTo(409);
+        assertThatThrownBy(() -> db.update("""
+                INSERT INTO bookings (guest_id, room_id, state, expected_arrival, expected_departure)
+                VALUES (1, 1, 'CONFIRMED', ?, ?)
+                """, arrival, departure)).isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("excl_bookings_room_no_overlap");
+
+        String extension = """
+                {"newDeparture":"%s"}
+                """.formatted(departure.plusDays(1));
+        var extended = request("POST", "/api/bookings/" + id + "/extend", extension, CLERK);
+        assertThat(extended.statusCode()).isEqualTo(200);
+        assertThat(JSON.readTree(extended.body()).get("nights").asInt()).isEqualTo(3);
+
+        assertThat(request("POST", "/api/admin/bookings/" + id + "/cancel", null, ADMIN).statusCode()).isEqualTo(204);
+        assertThat(db.queryForObject("SELECT cancelled_at IS NOT NULL FROM bookings WHERE booking_id = ?", Boolean.class, id)).isTrue();
+        assertThat(get("/api/admin/bookings/" + id).at("/history/0/newState").asString()).isEqualTo("CANCELLED");
+        var quote = get("/api/bookings/" + id + "/refund/quote");
+        assertThat(quote.get("refundPercent").asInt()).isEqualTo(100);
+        assertThat(quote.get("refundAmount").asInt()).isEqualTo(360);
+        var refund = request("POST", "/api/bookings/" + id + "/refund", "{\"reason\":\"Integration check\"}", CLERK);
+        assertThat(refund.statusCode()).isEqualTo(201);
+        assertThat(JSON.readTree(refund.body()).get("amount").asInt()).isEqualTo(360);
+        assertThat(request("POST", "/api/bookings/" + id + "/refund", null, CLERK).statusCode()).isEqualTo(409);
+        assertThat(get("/api/admin/reports?type=REFUNDS&hotelId=1&status=COMPLETED").at("/summary/1/value").asInt())
+                .isEqualTo(385);
+    }
+
     private JsonNode get(String path) throws Exception {
         var result = request("GET", path, null, ADMIN);
         assertThat(result.statusCode()).as(path + " " + result.body()).isEqualTo(200);
@@ -331,8 +450,8 @@ class Week13PostgresTest {
                 (1, 1, 'CONFIRMED', '2026-02-09T19:00:00Z', '2026-02-11T10:00:00Z', '2026-02-13T10:00:00Z'),
                 (2, 2, 'CHECKEDIN', '2026-02-10T18:59:59Z', '2026-02-10T09:00:00Z', '2026-02-12T10:00:00Z'),
                 (3, 3, 'CONFIRMED', '2026-02-10T12:00:00Z', '2026-02-11T10:00:00Z', '2026-02-12T10:00:00Z'),
-                (1, 1, 'CANCELLED', '2026-02-10T19:00:00Z', '2026-02-10T10:00:00Z', null),
-                (2, 2, 'ARCHIVED', '2026-02-09T18:59:59Z', '2026-02-10T10:00:00Z', null)
+                (1, 1, 'CANCELLED', '2026-02-10T19:00:00Z', '2026-02-10T10:00:00Z', '2026-02-11T10:00:00Z'),
+                (2, 2, 'ARCHIVED', '2026-02-09T18:59:59Z', '2026-02-10T10:00:00Z', '2026-02-11T10:00:00Z')
                 """);
         db.update("""
                 INSERT INTO refunds (booking_id, state, amount, processed_at) VALUES

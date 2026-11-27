@@ -1,5 +1,7 @@
 # Week 13 test report
 
+[PR #5 integration verification on PostgreSQL 17](PR5_INTEGRATION.md)
+
 ## Environment and results
 
 Verification ran on 26 November 2026 in Asia/Almaty using Temurin Java 26, Spring Boot 4.1.2, a dedicated PostgreSQL 14.18 cluster, Node 22, and Playwright in Chromium. The Compose file targets PostgreSQL 17. Docker Desktop was unavailable during verification, so the database and static frontend ran locally.

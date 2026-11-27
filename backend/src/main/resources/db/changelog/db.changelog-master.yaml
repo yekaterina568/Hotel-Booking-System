@@ -17,3 +17,9 @@ databaseChangeLog:
   - include:
       file: changes/week13-admin.sql
       relativeToChangelogFile: true
+  - include:
+      file: changes/backfill-booking-departures.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/006-prevent-double-booking-and-refund-rules.sql
+      relativeToChangelogFile: true

@@ -123,8 +123,9 @@ async function main() {
     await printable.waitForURL('blob:**');
     await printable.getByRole('heading', { name: 'Booking report' }).waitFor();
     assert.equal(await printable.locator('tbody tr').count(), reports.length);
+    assert.equal((await printable.pdf()).subarray(0, 4).toString(), '%PDF');
     await printable.close();
-    console.log('PASS Filtered report preview, CSV download, and printable HTML returned the same matching records.');
+    console.log('PASS Filtered report preview, CSV download, and printable PDF source returned the same matching records.');
 
     await nav(page, 'Rooms').click();
     const roomNumber = String(920000 + Date.now() % 75000);
@@ -163,8 +164,25 @@ async function main() {
     console.log('PASS Room ' + room.roomId + ' (' + roomNumber + ') was created, moved, repriced, and confirmed after reload.');
 
     await nav(page, '← Front desk').click();
+    await nav(page, 'Guest Registration').click();
+    const passport = 'W13' + Date.now().toString(36).toUpperCase();
+    async function fillGuest(phone) {
+      await page.locator('#regFirstName').fill('Browser');
+      await page.locator('#regLastName').fill('Guest');
+      await page.locator('#regPassport').fill(passport);
+      await page.locator('#regPhone').fill(phone);
+      await page.getByRole('button', { name: 'Register Guest' }).click();
+    }
+    await fillGuest('123');
+    await hasText(page.locator('#registrationMsg'), 'Registration failed (400)');
+    await fillGuest('+77000000001');
+    await hasText(page.locator('#registrationMsg'), 'registered in Database!');
+    await fillGuest('+77000000001');
+    await hasText(page.locator('#registrationMsg'), 'Registration failed (409)');
+    console.log('PASS Guest registration rejected an invalid phone and a duplicate passport, and saved valid data.');
+
     await nav(page, 'New Booking').click();
-    await page.getByLabel('Guest Passport').fill('W13DEMO001');
+    await page.getByLabel('Guest Passport').fill(passport);
     await page.getByLabel('Check-in (arrival)').fill(dateAfter(9) + 'T14:00');
     await page.getByLabel('Check-out (departure)').fill(dateAfter(11) + 'T11:00');
     const available = page.getByLabel('Free room for these dates');
@@ -175,8 +193,35 @@ async function main() {
     await page.getByRole('button', { name: 'Create Booking' }).click();
     await hasText(page.locator('#bookingMsg'), /Booking #\d+ created/);
     const bookingId = (await page.locator('#bookingMsg').innerText()).match(/Booking #(\d+)/)[1];
+    const duplicate = await page.evaluate(async id => {
+      const original = await hotelAuth.fetch(API_BASE_URL + '/bookings/' + id);
+      const booking = await original.json();
+      const response = await hotelAuth.fetch(API_BASE_URL + '/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guest: { guestId: booking.guestId },
+          room: { roomId: booking.roomId },
+          expectedArrival: booking.expectedArrival,
+          expectedDeparture: booking.expectedDeparture
+        })
+      });
+      return { status: response.status, detail: (await response.json()).detail };
+    }, bookingId);
+    assert.equal(duplicate.status, 409);
+    assert.match(duplicate.detail, new RegExp('#' + bookingId));
+    await page.locator('#manageBookingId').fill(bookingId);
+    await page.locator('#extendDeparture').fill(dateAfter(12) + 'T11:00');
+    await page.getByRole('button', { name: 'Extend stay' }).click();
+    await hasText(page.locator('#manageBookingMsg'), /Extended.*3 night/);
+    await hasText(page.locator('#manageBookingMsg'), '$599.25');
+    console.log('PASS Front-desk booking extension added a night, and an overlapping reservation returned HTTP 409.');
+
     await nav(page, 'Departures & Check-out').click();
-    await page.locator('#checkoutTbody tr').filter({ hasText: 'Check-out' }).first().waitFor();
+    const checkout = page.getByRole('button', { name: 'Check-out', exact: true }).first();
+    page.once('dialog', confirmation => confirmation.accept());
+    await checkout.click();
+    await hasText(page.locator('#checkoutMsg'), 'marked Dirty and keycards deactivated');
     await nav(page, 'Administration').click();
     await nav(page, 'Bookings').click();
     await page.getByRole('searchbox', { name: 'Search bookings' }).fill(roomNumber);
@@ -188,6 +233,23 @@ async function main() {
     await booking.getByRole('button', { name: 'Cancel booking' }).click();
     await page.getByRole('dialog', { name: 'Cancel booking?' }).getByRole('button', { name: 'Cancel booking' }).click();
     await hasText(page.locator('#dashboardFeedback'), 'Booking cancelled.');
+    await nav(page, '← Front desk').click();
+    await nav(page, 'Billing & Refunds').click();
+    await page.locator('#refundBookingId').fill(bookingId);
+    await page.getByRole('button', { name: 'Calculate' }).click();
+    await hasText(page.locator('#refundMsg'), '100%');
+    assert.equal(await page.locator('#refundAmount').inputValue(), '599.25');
+    page.once('dialog', confirmation => confirmation.accept());
+    await page.getByRole('button', { name: 'Issue Refund' }).click();
+    await hasText(page.locator('#refundMsg'), '$599.25 returned');
+    await page.locator('#refundBookingId').fill(bookingId);
+    await page.getByRole('button', { name: 'Calculate' }).click();
+    await hasText(page.locator('#refundMsg'), 'возврат уже оформлен');
+    console.log('PASS Refund quote used the admin cancellation and extended price, and a second refund was ineligible.');
+
+    await nav(page, 'Administration').click();
+    await nav(page, 'Bookings').click();
+    await page.getByRole('searchbox', { name: 'Search bookings' }).fill(roomNumber);
     await page.locator('#operationStatus').selectOption('CANCELLED');
     await booking.getByRole('button', { name: 'Archive booking' }).click();
     await page.getByRole('dialog', { name: 'Archive booking?' }).getByRole('button', { name: 'Archive booking' }).click();
@@ -199,7 +261,7 @@ async function main() {
     await page.getByRole('dialog', { name: 'Booking #' + bookingId }).getByRole('button', { name: 'Close' }).click();
     await nav(page, 'Booking Archive').click();
     await hasText(page.locator('#operationRows'), '#' + bookingId);
-    console.log('PASS Front-desk reservation #' + bookingId + ', admin cancellation, archive, and history persisted.');
+    console.log('PASS Front-desk reservation #' + bookingId + ', front-desk checkout, admin cancellation, archive, and history persisted.');
 
     await nav(page, 'Hotels').click();
     await hasText(page.locator('#hotelRows'), 'Grand Almaty');
@@ -238,6 +300,25 @@ async function main() {
     await page.getByRole('button', { name: 'Sign out' }).click();
     await page.getByRole('heading', { name: 'Admin sign-in' }).waitFor();
     assert.equal(await page.locator('#adminNav').isVisible(), false);
+
+    const operatorContext = await browser.newContext(browserContext);
+    const operator = watch(await operatorContext.newPage());
+    await operator.goto(front + '/index.html');
+    await operator.locator('#tabRegisterBtn').click();
+    await operator.locator('#regOpFullName').fill('Browser Operator');
+    await operator.locator('#regOpUsername').fill(username);
+    await operator.locator('#regOpRole').selectOption('Receptionist');
+    await operator.locator('#regOpPassword').fill('invalid-local-test-password');
+    await operator.getByRole('button', { name: 'Register & Enter Portal' }).click();
+    await hasText(operator.locator('#authMsg'), 'incorrect');
+    await operator.locator('#regOpPassword').fill(password);
+    await operator.getByRole('button', { name: 'Register & Enter Portal' }).click();
+    await hasText(operator.locator('#currentOperatorName'), 'Browser Operator');
+    await hasText(operator.locator('#currentOperatorRole'), 'Receptionist');
+    await operator.reload();
+    await hasText(operator.locator('#currentOperatorName'), 'Browser Operator');
+    await operatorContext.close();
+    console.log('PASS Operator profile registration still requires system credentials and preserves the profile.');
 
     const mobileContext = await browser.newContext({ ...browserContext, viewport: { width: 390, height: 844 },
       deviceScaleFactor: 1, isMobile: true, hasTouch: true });

@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: week13-upgrade-baseline.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/006-prevent-double-booking-and-refund-rules.sql
+      relativeToChangelogFile: true

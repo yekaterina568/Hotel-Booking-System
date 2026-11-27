@@ -55,7 +55,7 @@ function bookingActions(cell, booking) {
   cell.append(makeButton(label, action === 'cancel' ? 'btn-danger' : 'btn-secondary', () => {
     deletion = { type: 'booking', id: booking.bookingId, action };
     openConfirmation(label + '?', 'Booking #' + booking.bookingId
-      + (action === 'cancel' ? ' will be cancelled and the room released.' : ' will move to Booking Archive.'), label);
+      + (action === 'cancel' ? ' will be cancelled and the room released. Issue any eligible refund before archiving.' : ' will move to Booking Archive.'), label);
   }));
 }
 

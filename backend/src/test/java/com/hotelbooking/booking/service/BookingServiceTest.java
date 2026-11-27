@@ -67,6 +67,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("1. A new booking always gets state CONFIRMED and a createdAt time")
     void create_setsConfirmedStateAndCreatedAt() {
+        when(bookingRepository.lockRoom(10L)).thenReturn(10L);
         saveReturnsArgument();
         BookingEntity request = booking(1L, BookingState.CANCELLED); // client tries to send another state
         request.setExpectedArrival(ARRIVAL);
@@ -81,6 +82,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("2. Created booking DTO contains guestId, roomId and arrival time")
     void create_returnsDtoWithIds() {
+        when(bookingRepository.lockRoom(10L)).thenReturn(10L);
         saveReturnsArgument();
         OffsetDateTime arrival = OffsetDateTime.parse("2026-11-20T14:00:00+05:00");
         BookingEntity request = booking(1L, null);
@@ -171,6 +173,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("24. Without a departure date the booking is for one night")
     void create_withoutDeparture_defaultsToOneNight() {
+        when(bookingRepository.lockRoom(10L)).thenReturn(10L);
         saveReturnsArgument();
         BookingEntity request = booking(1L, null);
         request.setExpectedArrival(ARRIVAL);
@@ -198,6 +201,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("26. A room that is already booked for these dates can't be booked again (409)")
     void create_overlappingBooking_returns409() {
+        when(bookingRepository.lockRoom(10L)).thenReturn(10L);
         BookingEntity request = booking(2L, null);
         request.setExpectedArrival(ARRIVAL);
         request.setExpectedDeparture(ARRIVAL.plusDays(3));

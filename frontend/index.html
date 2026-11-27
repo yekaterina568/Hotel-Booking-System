@@ -9,26 +9,65 @@
   <script src="app.js" defer></script>
 </head>
 <body>
-  <main id="loginPanel" class="auth-page">
-    <section class="panel auth-panel" aria-labelledby="loginHeading">
-      <h1 id="loginHeading">Sign in</h1>
-      <p class="panel-desc">Enter your system username and password to continue.</p>
-      <form id="frontDeskSignInForm">
-        <div class="field-group">
-          <label for="frontDeskUsername">Username</label>
-          <input id="frontDeskUsername" name="username" autocomplete="username" required>
-        </div>
-        <div class="field-group">
-          <label for="frontDeskPassword">Password</label>
-          <input id="frontDeskPassword" name="password" type="password" autocomplete="current-password" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Sign in</button>
-        <p id="frontDeskSignInFeedback" class="feedback-banner" role="status"></p>
-      </form>
-    </section>
-  </main>
+  <!-- Operator Login & Registration Gate -->
+  <div id="authScreen" class="auth-screen" hidden>
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">H</div>
+        <h1 class="auth-title">Grand Almaty PMS</h1>
+        <p class="auth-sub">Front-Desk Operator Access Portal</p>
+      </div>
 
-  <div class="app-layout" hidden>
+      <div class="auth-tabs">
+        <button type="button" id="tabLoginBtn" class="auth-tab active">Sign In</button>
+        <button type="button" id="tabRegisterBtn" class="auth-tab">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="operatorLoginForm" class="auth-form">
+        <div class="field-group">
+          <label for="loginUsername">Operator Username</label>
+          <input type="text" id="loginUsername" autocomplete="username" required />
+        </div>
+        <div class="field-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Sign In to Portal</button>
+      </form>
+
+      <!-- Registration Form -->
+      <form id="operatorRegisterForm" class="auth-form" style="display: none;">
+        <div class="field-group">
+          <label for="regOpFullName">Full Name</label>
+          <input type="text" id="regOpFullName" placeholder="e.g. Aruzhan Tanatar" required />
+        </div>
+        <div class="field-group">
+          <label for="regOpUsername">System Username</label>
+          <input type="text" id="regOpUsername" autocomplete="username" required />
+        </div>
+        <div class="field-group">
+          <label for="regOpRole">Position / Role</label>
+          <select id="regOpRole">
+            <option value="Front-Desk Admin">Front-Desk Admin</option>
+            <option value="Shift Supervisor">Shift Supervisor</option>
+            <option value="Receptionist">Receptionist</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="regOpPassword">System Password</label>
+          <input type="password" id="regOpPassword" autocomplete="current-password" required />
+        </div>
+        <p class="panel-desc">Use the hotel system account. Your name and role are saved as your operator profile on this computer.</p>
+        <button type="submit" class="btn btn-primary btn-full">Register & Enter Portal</button>
+      </form>
+
+      <div id="authMsg" role="status"></div>
+    </div>
+  </div>
+
+
+  <div id="appLayout" class="app-layout" hidden>
     <!-- Left Navigation Sidebar -->
     <aside class="sidebar">
       <div class="brand">
@@ -41,14 +80,18 @@
 
       <nav class="nav-menu">
         <a href="#checkin-section" data-tab="checkin" class="nav-item active">Arrivals & Check-in</a>
-        <a href="#refunds-section" data-tab="refunds" class="nav-item">Billing & Refunds</a>
+        <a href="#registration-section" data-tab="registration" class="nav-item">Guest Registration</a>
         <a href="#booking-section" data-tab="booking" class="nav-item">New Booking</a>
-        <a href="#checkout-section" data-tab="checkout" class="nav-item">Departures & Check-out</a>
+        <a href="#checkout-section" data-tab="checkout" class="nav-item">Departures &amp; Check-out</a>
+        <a href="#refunds-section" data-tab="refunds" class="nav-item">Billing & Refunds</a>
+        <a href="#reviews-section" data-tab="reviews" class="nav-item">2GIS Reviews & Rating</a>
         <a href="admin.html" class="nav-item">Administration</a>
       </nav>
 
       <div class="operator-box">
-        <div class="operator-role">Front-Desk Operator</div>
+        <div id="currentOperatorRole" class="operator-role">Front-Desk Admin</div>
+        <div id="currentOperatorName" class="operator-name">Administrator</div>
+        <button type="button" id="logoutBtn" class="btn-logout">Sign out</button>
       </div>
     </aside>
 
@@ -56,14 +99,49 @@
     <div class="main-wrapper">
       <header class="topbar">
         <div id="pageTitle" class="page-title">Front-Desk Operations & Arrival Management</div>
-        <button id="frontDeskSignOut" class="btn btn-secondary" type="button">Sign out</button>
         <div class="system-status">
           <span class="status-dot"></span> System Online
         </div>
       </header>
 
       <main class="workspace">
-        <!-- Section 0: Create a Booking -->
+        <!-- Section: Guest Registration -->
+        <section id="registration-section" class="panel" style="display: none;">
+          <div class="panel-header">
+            <div>
+              <h2>New Guest Registration</h2>
+              <p class="panel-desc">Register a new guest profile in PostgreSQL before passport verification or room booking.</p>
+            </div>
+            <span class="badge-neutral">DB Sync</span>
+          </div>
+
+          <div class="panel-body">
+            <form id="registrationForm" class="reg-form-grid">
+              <div class="field-group">
+                <label for="regFirstName">First Name</label>
+                <input type="text" id="regFirstName" placeholder="e.g. Aruzhan" required />
+              </div>
+              <div class="field-group">
+                <label for="regLastName">Last Name</label>
+                <input type="text" id="regLastName" placeholder="e.g. Tanatar" required />
+              </div>
+              <div class="field-group">
+                <label for="regPassport">Passport / ID Number</label>
+                <input type="text" id="regPassport" placeholder="e.g. N12345678" maxlength="20" required />
+              </div>
+              <div class="field-group">
+                <label for="regPhone">Phone Number</label>
+                <input type="tel" id="regPhone" placeholder="+7 700 123 45 67" required />
+              </div>
+              <div class="full-row">
+                <button type="submit" id="regSubmitBtn" class="btn btn-primary">Register Guest</button>
+              </div>
+            </form>
+            <div id="registrationMsg"></div>
+          </div>
+        </section>
+
+        <!-- Section: Create a Booking -->
         <section id="booking-section" class="panel" style="display: none;">
           <div class="panel-header">
             <div>
@@ -110,12 +188,36 @@
                 <button type="submit" class="btn btn-primary">Create Booking</button>
               </div>
             </form>
-            <div id="bookingSummary" class="booking-summary"></div>
-            <div id="bookingMsg" class="feedback-banner"></div>
+            <div id="bookingMsg"></div>
+          </div>
+
+          <!-- Manage an existing booking: extend the stay or cancel it -->
+          <div class="panel-header">
+            <div>
+              <h2>Manage a Booking</h2>
+              <p class="panel-desc">Look up a booking, extend the stay to a later check-out (only if the room is free for the extra nights, max 30 nights in total) or cancel it.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="grid-form booking-form">
+              <div class="field-group">
+                <label for="manageBookingId">Booking ID</label>
+                <input type="number" id="manageBookingId" placeholder="42" min="1" />
+              </div>
+              <div class="field-group">
+                <label for="extendDeparture">New check-out (for extension)</label>
+                <input type="datetime-local" id="extendDeparture" />
+              </div>
+              <div class="field-action">
+                <button type="button" id="manageLookupBtn" class="btn">Look up</button>
+                <button type="button" id="manageExtendBtn" class="btn btn-primary">Extend stay</button>
+                <button type="button" id="manageCancelBtn" class="btn btn-danger">Cancel booking</button>
+              </div>
+            </div>
+            <div id="manageBookingMsg"></div>
           </div>
         </section>
 
-        <!-- Section 1: Passport Verification -->
         <section id="checkin-section" class="panel">
           <div class="panel-header">
             <div>
@@ -132,7 +234,7 @@
               </div>
               <button id="validateBtn" class="btn btn-primary">Verify Guest</button>
             </div>
-            <div id="validationMsg" class="feedback-banner"></div>
+            <div id="validationMsg"></div>
           </div>
         </section>
 
@@ -170,7 +272,7 @@
           <div class="panel-header">
             <div>
               <h2>Cancellation & Refund Processing</h2>
-              <p class="panel-desc">Issue guest refunds for cancelled bookings and log financial adjustments.</p>
+              <p class="panel-desc">Refunds follow the cancellation rules: cancelled 7+ days before arrival — 100%, 3–6 days — 50%, less than 3 days — no refund. One refund per cancelled booking; the amount is calculated by the server.</p>
             </div>
           </div>
 
@@ -181,18 +283,19 @@
                 <input type="number" id="refundBookingId" placeholder="101" required />
               </div>
               <div class="field-group">
-                <label for="refundAmount">Amount (USD)</label>
-                <input type="number" id="refundAmount" placeholder="120.00" step="0.01" required />
+                <label for="refundAmount">Refund by the rules (USD)</label>
+                <input type="number" id="refundAmount" placeholder="Calculated" step="0.01" readonly />
               </div>
               <div class="field-group span-2">
                 <label for="refundReason">Reason for Refund</label>
-                <input type="text" id="refundReason" placeholder="Flight cancellation / Early checkout" required />
+                <input type="text" id="refundReason" placeholder="Flight cancellation / Change of plans" />
               </div>
               <div class="field-action">
-                <button type="submit" class="btn btn-danger">Issue Refund</button>
+                <button type="button" id="refundQuoteBtn" class="btn">Calculate</button>
+                <button type="submit" id="refundSubmitBtn" class="btn btn-danger">Issue Refund</button>
               </div>
             </form>
-            <div id="refundMsg" class="feedback-banner"></div>
+            <div id="refundMsg"></div>
           </div>
 
           <div class="table-container">
@@ -213,6 +316,7 @@
             </table>
           </div>
         </section>
+
         <!-- Section 4: Departures & Check-out -->
         <section id="checkout-section" class="panel" style="display: none;">
           <div class="panel-header">
@@ -245,6 +349,59 @@
                 <!-- Populated by app.js -->
               </tbody>
             </table>
+          </div>
+        </section>
+
+        <!-- Section 4: 2GIS Hotel Feedback & Rating -->
+        <section id="reviews-section" class="panel" style="display: none;">
+          <div class="gis-header-card">
+            <div class="gis-hotel-meta">
+              <span class="gis-badge">2GIS Verified • Hotel</span>
+              <h2 class="gis-hotel-title">Grand Almaty Hotel & Spa</h2>
+              <p class="gis-hotel-sub">Almaty, Dostyk Ave 105 • 5-Star Business & Leisure Hotel</p>
+            </div>
+
+            <div class="gis-score-box">
+              <div class="gis-big-rating">
+                <div id="gisAvgScore" class="gis-score-num">4.8</div>
+                <div class="gis-stars-row">★★★★★</div>
+                <div id="gisTotalCount" class="gis-count-label">4 reviews on 2GIS</div>
+              </div>
+              <div id="gisBarsContainer" class="gis-bars">
+                <!-- Rating distribution bars -->
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-body border-bottom">
+            <form id="reviewForm" class="reg-form-grid">
+              <div class="field-group">
+                <label for="reviewAuthor">Guest Name</label>
+                <input type="text" id="reviewAuthor" placeholder="Your full name" required />
+              </div>
+              <div class="field-group">
+                <label>Hotel Rating (1 to 5)</label>
+                <div class="star-picker" id="starPicker">
+                  <button type="button" class="star-btn" data-rating="1">1 ★</button>
+                  <button type="button" class="star-btn" data-rating="2">2 ★</button>
+                  <button type="button" class="star-btn" data-rating="3">3 ★</button>
+                  <button type="button" class="star-btn" data-rating="4">4 ★</button>
+                  <button type="button" class="star-btn selected" data-rating="5">5 ★</button>
+                </div>
+              </div>
+              <div class="field-group full-row">
+                <label for="reviewComment">Feedback about Grand Almaty Hotel</label>
+                <textarea id="reviewComment" placeholder="Share impressions about room cleanliness, staff hospitality, breakfast, or check-in speed..." required></textarea>
+              </div>
+              <div class="full-row">
+                <button type="submit" class="btn btn-primary">Publish 2GIS Review</button>
+              </div>
+            </form>
+            <div id="reviewMsg"></div>
+          </div>
+
+          <div id="reviewsList" class="reviews-list">
+            <!-- Populated by app.js -->
           </div>
         </section>
       </main>
