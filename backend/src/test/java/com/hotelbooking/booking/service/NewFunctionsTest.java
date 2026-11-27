@@ -53,7 +53,7 @@ class NewFunctionsTest {
         booking.setBookingId(3L);
         booking.setRoom(room);
         booking.setState(BookingState.CONFIRMED);
-        when(bookingRepository.findById(3L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.lockById(3L)).thenReturn(Optional.of(booking));
         when(bookingRepository.save(any(BookingEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         BookingDto result = new BookingService(bookingRepository).checkIn(3L);

@@ -6,6 +6,7 @@ import com.hotelbooking.booking.archive.model.BookingArchiveDto;
 import com.hotelbooking.booking.db.BookingEntity;
 import com.hotelbooking.booking.db.BookingRepository;
 import com.hotelbooking.booking.model.BookingState;
+import com.hotelbooking.booking.service.BookingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -46,11 +47,11 @@ public class BookingArchiveService {
     @Transactional
     @CacheEvict(value = {"bookingArchive", "bookings"}, allEntries = true)
     public BookingArchiveDto archive(Long bookingId) {
-        BookingEntity booking = bookingRepository.findById(bookingId)
+        BookingEntity booking = bookingRepository.lockById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Booking not found: " + bookingId));
 
-        if (booking.getState() == BookingState.CONFIRMED) {
+        if (BookingService.ACTIVE_STATES.contains(booking.getState())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Нельзя архивировать активную бронь");
         }

@@ -6,6 +6,7 @@ import com.hotelbooking.room.model.RoomDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -39,6 +40,7 @@ public class RoomService {
 
     @CacheEvict(value = "rooms", allEntries = true)
     public RoomDto create(RoomEntity room) {
+        room.setHotelId(1L); // Legacy front-desk creation belongs to the original property.
         RoomDto created = RoomDto.fromEntity(roomRepository.save(room));
         log.info("Created room id={}", created.roomId());
         return created;
@@ -49,7 +51,11 @@ public class RoomService {
         if (!roomRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found: " + id);
         }
-        roomRepository.deleteById(id);
+        try {
+            roomRepository.deleteById(id);
+        } catch (DataIntegrityViolationException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Rooms with booking history cannot be deleted.");
+        }
         log.info("Deleted room id={}", id);
     }
 }

@@ -49,7 +49,7 @@ class FoundBugsTest {
         booking.setBookingId(3L);
         booking.setRoom(room);
         booking.setState(BookingState.CONFIRMED);
-        lenient().when(bookingRepository.findById(3L)).thenReturn(Optional.of(booking));
+        lenient().when(bookingRepository.lockById(3L)).thenReturn(Optional.of(booking));
         lenient().when(bookingRepository.save(booking)).thenReturn(booking);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,

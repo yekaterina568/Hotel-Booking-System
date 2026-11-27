@@ -1,7 +1,9 @@
 package com.hotelbooking.booking.db;
 
 import com.hotelbooking.booking.model.BookingState;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,8 +11,13 @@ import org.springframework.data.repository.query.Param;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<BookingEntity, Long> {
+    /** Lock the current booking state before changing dates or status. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select b from BookingEntity b where b.bookingId = :id")
+    Optional<BookingEntity> lockById(long id);
 
     /** Bookings of one room in the given states whose stay overlaps [from, to). */
     @Query("""

@@ -78,6 +78,7 @@ function switchTab(tabName) {
     checkin: ['checkin-section', 'priority-queue-section'],
     registration: ['registration-section'],
     booking: ['booking-section'],
+    checkout: ['checkout-section'],
     refunds: ['refunds-section'],
     reviews: ['reviews-section']
   };
@@ -86,6 +87,7 @@ function switchTab(tabName) {
     checkin: 'Front-Desk Operations & Arrival Management',
     registration: 'Guest Registration & Onboarding',
     booking: 'New Reservation & Room Assignment',
+    checkout: 'Departures & Check-out',
     refunds: 'Billing & Refund Management',
     reviews: '2GIS Hotel Feedback & Guest Rating'
   };
@@ -105,6 +107,7 @@ function switchTab(tabName) {
   });
 
   document.getElementById('pageTitle').textContent = titles[tabName] || titles.checkin;
+  if (tabName === 'checkout') loadCheckouts();
 }
 
 document.querySelectorAll('.nav-item[data-tab]').forEach(link => {
@@ -199,7 +202,8 @@ async function loadBookingOptions() {
         const option = document.createElement('option');
         option.value = room.roomId;
         const price = room.pricePerNight == null ? '' : ` · ${moneyFormat.format(room.pricePerNight)}/night`;
-        option.textContent = `Room ${room.roomNumber} (${room.roomType || 'Standard'})${price}`;
+        const hotel = room.hotelId == null ? '' : ` · Hotel #${room.hotelId}`;
+        option.textContent = `Room ${room.roomNumber} (${room.roomType || 'Standard'})${hotel}${price}`;
         select.appendChild(option);
       });
       return;
@@ -634,6 +638,85 @@ async function cancelBooking() {
     const btn = document.getElementById(id);
     if (btn) btn.addEventListener('click', handler);
   });
+
+async function loadCheckouts() {
+  const table = document.getElementById('checkoutTbody');
+  function showState(message) {
+    table.replaceChildren();
+    const cell = table.insertRow().insertCell();
+    cell.colSpan = 8;
+    cell.textContent = message;
+  }
+
+  showState('Loading checked-in guests…');
+  try {
+    const responses = await Promise.all(['/bookings', '/rooms', '/guests']
+      .map(path => hotelAuth.fetch(API_BASE_URL + path)));
+    if (responses.some(response => !response.ok)) throw new Error('Could not load checked-in guests.');
+    const [bookings, rooms, guests] = await Promise.all(responses.map(response => response.json()));
+    const inHouse = bookings.filter(booking => booking.state === 'CHECKEDIN')
+      .sort((left, right) => new Date(left.expectedDeparture) - new Date(right.expectedDeparture));
+    if (!inHouse.length) {
+      showState('No checked-in guests right now.');
+      return;
+    }
+
+    const roomsById = new Map(rooms.map(room => [room.roomId, room]));
+    const guestsById = new Map(guests.map(guest => [guest.guestId, guest]));
+    const today = new Date();
+    table.replaceChildren();
+    for (const booking of inHouse) {
+      const room = roomsById.get(booking.roomId);
+      const guest = guestsById.get(booking.guestId);
+      const roomLabel = room ? `${room.roomNumber} · Hotel #${room.hotelId}` : String(booking.roomId);
+      const guestName = guest ? `${guest.firstName} ${guest.lastName}` : `Guest #${booking.guestId}`;
+      const row = table.insertRow();
+      const values = [`#${booking.bookingId}`, guestName, roomLabel, formatDateTime(booking.expectedArrival),
+        formatDateTime(booking.expectedDeparture), booking.nights ?? '—',
+        booking.totalPrice == null ? '—' : moneyFormat.format(booking.totalPrice)];
+      for (const value of values) row.insertCell().textContent = value;
+
+      const departure = new Date(booking.expectedDeparture);
+      if (booking.expectedDeparture && (departure < today || departure.toDateString() === today.toDateString())) {
+        const badge = document.createElement('span');
+        badge.className = departure < today ? 'badge badge-overdue' : 'badge badge-today';
+        badge.textContent = departure < today ? 'Overdue' : 'Today';
+        row.cells[4].append(badge);
+      }
+
+      const cell = row.insertCell();
+      cell.className = 'text-right';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn-assign';
+      button.textContent = 'Check-out';
+      button.addEventListener('click', () => checkOutBooking(booking.bookingId, roomLabel));
+      cell.append(button);
+    }
+  } catch {
+    showState('Could not load checked-in guests. Check the backend connection.');
+  }
+}
+
+async function checkOutBooking(bookingId, roomLabel) {
+  if (!confirm(`Check out booking #${bookingId} from room ${roomLabel}?`)) return;
+  const message = document.getElementById('checkoutMsg');
+  try {
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/bookings/${bookingId}/check-out`, { method: 'POST' });
+    if (!response.ok) throw new Error(await readError(response, 'Check-out failed.'));
+    const booking = await response.json();
+    const total = booking.totalPrice == null ? '' : ` Amount due: ${moneyFormat.format(booking.totalPrice)}.`;
+    message.textContent = `Booking #${bookingId} checked out. Room ${roomLabel} marked Dirty and keycards deactivated.${total}`;
+    message.className = 'feedback-banner success';
+    loadCheckouts();
+    loadPriorityQueue();
+  } catch (error) {
+    message.textContent = error.message;
+    message.className = 'feedback-banner error';
+  }
+}
+
+document.getElementById('refreshCheckoutsBtn').addEventListener('click', loadCheckouts);
 
 // 8. Отмена / удаление возврата (DELETE /api/refunds/{id})
 async function cancelRefund(refundId) {

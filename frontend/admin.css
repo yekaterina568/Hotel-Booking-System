@@ -100,12 +100,6 @@
   outline-offset: 3px;
 }
 
-.admin-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
 .metric {
   display: grid;
   gap: 6px;
@@ -155,7 +149,7 @@
   width: min(100%, 495px);
 }
 
-.operation-filters:has([hidden]) {
+.operation-filters:has(#operationStatusField[hidden]) {
   grid-template-columns: minmax(0, 1fr);
   max-width: 320px;
 }
@@ -406,10 +400,6 @@
     margin-bottom: 16px;
   }
 
-  .admin-metrics {
-    gap: 8px;
-  }
-
   .metric {
     padding: 10px;
   }
@@ -478,5 +468,191 @@
 
   .admin-records tbody .empty-state {
     padding: 12px 0;
+  }
+}
+
+.insights-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 16px;
+}
+
+.insights-filters .field-group {
+  flex: 1 1 132px;
+}
+
+.insights-filters .btn {
+  margin-top: 2px;
+}
+
+.dashboard-group {
+  margin-top: 26px;
+}
+
+.insights-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.insights-heading p,
+.insights-note,
+.chart-card details,
+#reportGenerated {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.insights-note {
+  margin-top: 8px;
+}
+
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#activityMetrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dashboard-metrics .metric {
+  align-content: start;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.chart-card {
+  min-width: 0;
+  padding: 16px;
+}
+
+.chart-frame {
+  position: relative;
+  height: 220px;
+  margin-block: 6px 10px;
+}
+
+.chart-empty {
+  display: grid;
+  min-height: 145px;
+  place-items: center;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.chart-card details summary {
+  cursor: pointer;
+}
+
+.chart-values {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.chart-values th,
+.chart-values td {
+  padding: 4px 8px;
+}
+
+.report-preview-header,
+.report-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  padding: 14px 16px;
+}
+
+.report-preview-header {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.report-values dt {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.report-values dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.report-values > div {
+  min-width: 0;
+}
+
+.report-values + .report-values {
+  border-top: 1px solid var(--border-color);
+}
+
+.report-totals {
+  background: #f5f7fc;
+}
+
+.report-preview-header .heading-actions {
+  flex-wrap: wrap;
+}
+
+.operation-filters.has-hotel {
+  width: min(100%, 770px);
+  grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+}
+
+#bookingDetailContent h3 {
+  font-size: 15px;
+  margin-top: 14px;
+}
+
+.booking-history {
+  margin: 8px 0 0 20px;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  #activityMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chart-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .insights-filters .btn {
+    width: 100%;
+  }
+
+  .operation-filters.has-hotel {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .operation-filters.has-hotel .field-group:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+.operation-actions .btn {
+  height: 32px;
+  margin: 2px 4px 2px 0;
+  padding-inline: 9px;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .operation-actions {
+    grid-column: 1 / -1;
   }
 }

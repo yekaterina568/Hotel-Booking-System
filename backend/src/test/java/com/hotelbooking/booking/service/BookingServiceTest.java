@@ -67,6 +67,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("1. A new booking always gets state CONFIRMED and a createdAt time")
     void create_setsConfirmedStateAndCreatedAt() {
+        when(bookingRepository.lockRoom(10L)).thenReturn(10L);
         saveReturnsArgument();
         BookingEntity request = booking(1L, BookingState.CANCELLED); // client tries to send another state
         request.setExpectedArrival(ARRIVAL);
@@ -81,6 +82,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("2. Created booking DTO contains guestId, roomId and arrival time")
     void create_returnsDtoWithIds() {
+        when(bookingRepository.lockRoom(10L)).thenReturn(10L);
         saveReturnsArgument();
         OffsetDateTime arrival = OffsetDateTime.parse("2026-11-20T14:00:00+05:00");
         BookingEntity request = booking(1L, null);
@@ -97,7 +99,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("3. Confirmed booking becomes CHECKEDIN after check-in")
     void checkIn_confirmedBooking_becomesCheckedIn() {
-        when(bookingRepository.findById(3L)).thenReturn(Optional.of(booking(3L, BookingState.CONFIRMED)));
+        when(bookingRepository.lockById(3L)).thenReturn(Optional.of(booking(3L, BookingState.CONFIRMED)));
         saveReturnsArgument();
 
         BookingDto result = bookingService.checkIn(3L);
@@ -108,7 +110,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("4. A cancelled booking can't be checked in (409)")
     void checkIn_cancelledBooking_returns409() {
-        when(bookingRepository.findById(3L)).thenReturn(Optional.of(booking(3L, BookingState.CANCELLED)));
+        when(bookingRepository.lockById(3L)).thenReturn(Optional.of(booking(3L, BookingState.CANCELLED)));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> bookingService.checkIn(3L));
@@ -120,7 +122,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("5. Confirmed booking becomes CANCELLED after cancel")
     void cancel_confirmedBooking_becomesCancelled() {
-        when(bookingRepository.findById(4L)).thenReturn(Optional.of(booking(4L, BookingState.CONFIRMED)));
+        when(bookingRepository.lockById(4L)).thenReturn(Optional.of(booking(4L, BookingState.CONFIRMED)));
         saveReturnsArgument();
 
         BookingDto result = bookingService.cancel(4L);
@@ -132,7 +134,7 @@ class BookingServiceTest {
     @DisplayName("6. A checked-in booking can't be cancelled (409)")
     void cancel_checkedInBooking_returns409() {
         BookingEntity b = booking(4L, BookingState.CHECKEDIN);
-        when(bookingRepository.findById(4L)).thenReturn(Optional.of(b));
+        when(bookingRepository.lockById(4L)).thenReturn(Optional.of(b));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> bookingService.cancel(4L));
@@ -171,6 +173,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("24. Without a departure date the booking is for one night")
     void create_withoutDeparture_defaultsToOneNight() {
+        when(bookingRepository.lockRoom(10L)).thenReturn(10L);
         saveReturnsArgument();
         BookingEntity request = booking(1L, null);
         request.setExpectedArrival(ARRIVAL);
@@ -198,6 +201,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("26. A room that is already booked for these dates can't be booked again (409)")
     void create_overlappingBooking_returns409() {
+        when(bookingRepository.lockRoom(10L)).thenReturn(10L);
         BookingEntity request = booking(2L, null);
         request.setExpectedArrival(ARRIVAL);
         request.setExpectedDeparture(ARRIVAL.plusDays(3));
@@ -242,7 +246,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("29. Check-out: booking becomes CHECKEDOUT, room DIRTY, keycards are deactivated")
     void checkOut_checkedInBooking_becomesCheckedOut() {
-        when(bookingRepository.findById(5L)).thenReturn(Optional.of(booking(5L, BookingState.CHECKEDIN)));
+        when(bookingRepository.lockById(5L)).thenReturn(Optional.of(booking(5L, BookingState.CHECKEDIN)));
         saveReturnsArgument();
 
         BookingDto result = bookingService.checkOut(5L);
@@ -256,7 +260,7 @@ class BookingServiceTest {
     @Test
     @DisplayName("30. A guest who hasn't checked in can't check out (409)")
     void checkOut_confirmedBooking_returns409() {
-        when(bookingRepository.findById(6L)).thenReturn(Optional.of(booking(6L, BookingState.CONFIRMED)));
+        when(bookingRepository.lockById(6L)).thenReturn(Optional.of(booking(6L, BookingState.CONFIRMED)));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> bookingService.checkOut(6L));

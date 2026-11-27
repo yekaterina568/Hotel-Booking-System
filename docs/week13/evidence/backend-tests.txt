@@ -1,0 +1,29 @@
+Verification date: 2026-11-26 (Asia/Almaty)
+openjdk version "26.0.2.1" 2026-08-18
+OpenJDK Runtime Environment Temurin-26.0.2.1+1 (build 26.0.2.1+1)
+OpenJDK 64-Bit Server VM Temurin-26.0.2.1+1 (build 26.0.2.1+1, mixed mode, sharing)
+PostgreSQL: 14.18 (Homebrew)
+
+Baseline 20ecfecaf435a0eb4a20d66064dd034ca07646e9, ./mvnw test
+Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type 'org.springframework.security.config.annotation.web.builders.HttpSecurity' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+[ERROR] Tests run: 64, Failures: 0, Errors: 10, Skipped: 0
+
+Feature branch, ./mvnw clean test with WEEK13_TEST_JDBC_URL
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.908 s -- in com.hotelbooking.room.controller.RoomControllerTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.076 s -- in com.hotelbooking.room.service.RoomServiceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.033 s -- in com.hotelbooking.hotel.service.HotelServiceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.059 s -- in com.hotelbooking.booking.archive.service.BookingArchiveServiceTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.115 s -- in com.hotelbooking.booking.controller.BookingControllerTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.024 s -- in com.hotelbooking.booking.service.BookingServiceTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in com.hotelbooking.booking.service.AvailabilityServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.027 s -- in com.hotelbooking.keycard.controller.KeycardControllerTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.024 s -- in com.hotelbooking.keycard.service.KeycardServiceTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.226 s -- in com.hotelbooking.HotelBookingApplicationTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.869 s -- in com.hotelbooking.admin.Week13PostgresTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.055 s -- in com.hotelbooking.admin.AdminAccessTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.039 s -- in com.hotelbooking.review.service.ReviewServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.068 s -- in com.hotelbooking.guest.service.GuestServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in com.hotelbooking.refund.controller.RefundControllerTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.037 s -- in com.hotelbooking.refund.service.RefundServiceTest
+[INFO] Tests run: 73, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS

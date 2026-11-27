@@ -1,0 +1,12 @@
+Chromium 158.0.8127.88
+PASS Admin rejected the wrong password, opened Dashboard, and rendered all six charts.
+PASS Hotel, last-seven-days, all-time, empty and invalid custom filters and backend recovery behaved as expected.
+PASS Filtered report preview, CSV download, and printable PDF source returned the same matching records.
+PASS Room 12 (969130) was created, moved, repriced, and confirmed after reload.
+PASS Guest registration rejected an invalid phone and a duplicate passport, and saved valid data.
+PASS Front-desk booking extension added a night, and an overlapping reservation returned HTTP 409.
+PASS Refund quote used the admin cancellation and extended price, and a second refund was ineligible.
+PASS Front-desk reservation #44, front-desk checkout, admin cancellation, archive, and history persisted.
+PASS Existing hotel add/delete and pending/published/hidden moderation worked.
+PASS Operator profile registration still requires system credentials and preserves the profile.
+PASS Sign-out, 390px mobile dashboard and reports, and zero uncaught JavaScript errors.

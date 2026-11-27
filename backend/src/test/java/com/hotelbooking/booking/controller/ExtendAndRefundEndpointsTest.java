@@ -3,6 +3,7 @@ package com.hotelbooking.booking.controller;
 import com.hotelbooking.booking.model.BookingDto;
 import com.hotelbooking.booking.model.BookingState;
 import com.hotelbooking.booking.service.BookingService;
+import com.hotelbooking.admin.AdminApiErrors;
 import com.hotelbooking.config.DatabaseConflictErrors;
 import com.hotelbooking.refund.controller.BookingRefundController;
 import com.hotelbooking.refund.model.RefundDto;
@@ -45,7 +46,7 @@ class ExtendAndRefundEndpointsTest {
         refundPolicyService = mock(RefundPolicyService.class);
         mockMvc = MockMvcBuilders
                 .standaloneSetup(new BookingController(bookingService), new BookingRefundController(refundPolicyService))
-                .setControllerAdvice(new DatabaseConflictErrors())
+                .setControllerAdvice(new AdminApiErrors(), new DatabaseConflictErrors())
                 .build();
     }
 

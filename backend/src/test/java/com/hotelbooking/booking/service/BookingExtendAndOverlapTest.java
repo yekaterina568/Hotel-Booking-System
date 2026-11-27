@@ -117,7 +117,7 @@ class BookingExtendAndOverlapTest {
     void extend_freeNights_updatesDepartureAndTotal() {
         BookingEntity b = booking(5L, BookingState.CHECKEDIN, ARRIVAL, DEPARTURE);
         OffsetDateTime newDeparture = DEPARTURE.plusDays(2);
-        when(bookingRepository.findById(5L)).thenReturn(Optional.of(b));
+        when(bookingRepository.lockById(5L)).thenReturn(Optional.of(b));
         when(bookingRepository.lockRoom(10L)).thenReturn(10L);
         when(bookingRepository.findOverlapping(eq(10L), anyCollection(), eq(DEPARTURE), eq(newDeparture)))
                 .thenReturn(List.of());
@@ -136,7 +136,7 @@ class BookingExtendAndOverlapTest {
         BookingEntity b = booking(5L, BookingState.CONFIRMED, ARRIVAL, DEPARTURE);
         BookingEntity next = booking(6L, BookingState.CONFIRMED, DEPARTURE.plusDays(1), DEPARTURE.plusDays(4));
         OffsetDateTime newDeparture = DEPARTURE.plusDays(2);
-        when(bookingRepository.findById(5L)).thenReturn(Optional.of(b));
+        when(bookingRepository.lockById(5L)).thenReturn(Optional.of(b));
         when(bookingRepository.lockRoom(10L)).thenReturn(10L);
         when(bookingRepository.findOverlapping(eq(10L), anyCollection(), eq(DEPARTURE), eq(newDeparture)))
                 .thenReturn(List.of(next));
@@ -153,9 +153,9 @@ class BookingExtendAndOverlapTest {
     @Test
     @DisplayName("74. A cancelled or checked-out booking can't be extended (409)")
     void extend_cancelledBooking_returns409() {
-        when(bookingRepository.findById(5L))
+        when(bookingRepository.lockById(5L))
                 .thenReturn(Optional.of(booking(5L, BookingState.CANCELLED, ARRIVAL, DEPARTURE)));
-        when(bookingRepository.findById(7L))
+        when(bookingRepository.lockById(7L))
                 .thenReturn(Optional.of(booking(7L, BookingState.CHECKEDOUT, ARRIVAL, DEPARTURE)));
 
         assertEquals(409, assertThrows(ResponseStatusException.class,
@@ -168,7 +168,7 @@ class BookingExtendAndOverlapTest {
     @Test
     @DisplayName("75. The new departure must be later than the current one (400)")
     void extend_notLater_returns400() {
-        when(bookingRepository.findById(5L))
+        when(bookingRepository.lockById(5L))
                 .thenReturn(Optional.of(booking(5L, BookingState.CONFIRMED, ARRIVAL, DEPARTURE)));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -181,7 +181,7 @@ class BookingExtendAndOverlapTest {
     @Test
     @DisplayName("76. A stay can't be extended beyond 30 nights (400)")
     void extend_beyondMaxStay_returns400() {
-        when(bookingRepository.findById(5L))
+        when(bookingRepository.lockById(5L))
                 .thenReturn(Optional.of(booking(5L, BookingState.CONFIRMED, ARRIVAL, DEPARTURE)));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -205,7 +205,7 @@ class BookingExtendAndOverlapTest {
     @DisplayName("78. Cancelling a booking stores the cancellation time (used for the refund percentage)")
     void cancel_setsCancelledAt() {
         BookingEntity b = booking(4L, BookingState.CONFIRMED, ARRIVAL, DEPARTURE);
-        when(bookingRepository.findById(4L)).thenReturn(Optional.of(b));
+        when(bookingRepository.lockById(4L)).thenReturn(Optional.of(b));
         when(bookingRepository.save(any(BookingEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         bookingService.cancel(4L);

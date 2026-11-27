@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: week13-upgrade-baseline.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/week13-admin.sql
+      relativeToChangelogFile: true
