@@ -5,31 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hotel PMS — Front-Desk Operations</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="auth.js" defer></script>
-  <script src="app.js" defer></script>
 </head>
 <body>
-  <main id="loginPanel" class="auth-page">
-    <section class="panel auth-panel" aria-labelledby="loginHeading">
-      <h1 id="loginHeading">Sign in</h1>
-      <p class="panel-desc">Enter your system username and password to continue.</p>
-      <form id="frontDeskSignInForm">
-        <div class="field-group">
-          <label for="frontDeskUsername">Username</label>
-          <input id="frontDeskUsername" name="username" autocomplete="username" required>
-        </div>
-        <div class="field-group">
-          <label for="frontDeskPassword">Password</label>
-          <input id="frontDeskPassword" name="password" type="password" autocomplete="current-password" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Sign in</button>
-        <p id="frontDeskSignInFeedback" class="feedback-banner" role="status"></p>
-      </form>
-    </section>
-  </main>
+  <!-- Operator Login & Registration Gate -->
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">H</div>
+        <h1 class="auth-title">Grand Almaty PMS</h1>
+        <p class="auth-sub">Front-Desk Operator Access Portal</p>
+      </div>
 
-  <div class="app-layout" hidden>
-    <!-- Left Navigation Sidebar -->
+      <div class="auth-tabs">
+        <button type="button" id="tabLoginBtn" class="auth-tab active">Sign In</button>
+        <button type="button" id="tabRegisterBtn" class="auth-tab">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="operatorLoginForm" class="auth-form">
+        <div class="field-group">
+          <label for="loginUsername">Operator Username</label>
+          <input type="text" id="loginUsername" placeholder="admin" required />
+        </div>
+        <div class="field-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="••••" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Sign In to Portal</button>
+      </form>
+
+      <!-- Registration Form -->
+      <form id="operatorRegisterForm" class="auth-form" style="display: none;">
+        <div class="field-group">
+          <label for="regOpFullName">Full Name</label>
+          <input type="text" id="regOpFullName" placeholder="e.g. Aruzhan Tanatar" required />
+        </div>
+        <div class="field-group">
+          <label for="regOpUsername">Create Username</label>
+          <input type="text" id="regOpUsername" placeholder="e.g. aruzhan_fd" required />
+        </div>
+        <div class="field-group">
+          <label for="regOpRole">Position / Role</label>
+          <select id="regOpRole">
+            <option value="Front-Desk Admin">Front-Desk Admin</option>
+            <option value="Shift Supervisor">Shift Supervisor</option>
+            <option value="Receptionist">Receptionist</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="regOpPassword">Create Password</label>
+          <input type="password" id="regOpPassword" placeholder="Min 4 characters" minlength="4" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Register & Enter Portal</button>
+      </form>
+
+      <div id="authMsg"></div>
+    </div>
+  </div>
+
+  <!-- Main Application Layout (Shown after login/registration) -->
+  <div id="appLayout" class="app-layout" style="display: none;">
     <aside class="sidebar">
       <div class="brand">
         <span class="brand-mark">H</span>
@@ -41,7 +76,6 @@
 
       <nav class="nav-menu">
         <a href="#checkin-section" data-tab="checkin" class="nav-item active">Arrivals & Check-in</a>
-        <a href="#registration-section" data-tab="registration" class="nav-item">Guest Registration</a>
         <a href="#booking-section" data-tab="booking" class="nav-item">New Booking</a>
         <a href="#refunds-section" data-tab="refunds" class="nav-item">Billing & Refunds</a>
         <a href="#reviews-section" data-tab="reviews" class="nav-item">2GIS Reviews & Rating</a>
@@ -49,105 +83,55 @@
       </nav>
 
       <div class="operator-box">
-        <div class="operator-role">Front-Desk Operator</div>
+        <div id="currentOperatorRole" class="operator-role">Front-Desk Admin</div>
+        <div id="currentOperatorName" class="operator-name">Administrator</div>
+        <button type="button" id="logoutBtn" class="btn-logout">Sign out</button>
       </div>
     </aside>
 
-    <!-- Main Workspace -->
     <div class="main-wrapper">
       <header class="topbar">
         <div id="pageTitle" class="page-title">Front-Desk Operations & Arrival Management</div>
-        <button id="frontDeskSignOut" class="btn btn-secondary" type="button">Sign out</button>
         <div class="system-status">
           <span class="status-dot"></span> System Online
         </div>
       </header>
 
       <main class="workspace">
-        <!-- Section: Guest Registration -->
-        <section id="registration-section" class="panel" style="display: none;">
-          <div class="panel-header">
-            <div>
-              <h2>New Guest Registration</h2>
-              <p class="panel-desc">Register a new guest profile in PostgreSQL before passport verification or room booking.</p>
-            </div>
-            <span class="badge-neutral">DB Sync</span>
-          </div>
-
-          <div class="panel-body">
-            <form id="registrationForm" class="reg-form-grid">
-              <div class="field-group">
-                <label for="regFirstName">First Name</label>
-                <input type="text" id="regFirstName" placeholder="e.g. Aruzhan" required />
-              </div>
-              <div class="field-group">
-                <label for="regLastName">Last Name</label>
-                <input type="text" id="regLastName" placeholder="e.g. Tanatar" required />
-              </div>
-              <div class="field-group">
-                <label for="regPassport">Passport / ID Number</label>
-                <input type="text" id="regPassport" placeholder="e.g. N12345678" maxlength="12" required />
-              </div>
-              <div class="field-group">
-                <label for="regPhone">Phone Number</label>
-                <input type="tel" id="regPhone" placeholder="+7 700 123 45 67" required />
-              </div>
-              <div class="full-row">
-                <button type="submit" id="regSubmitBtn" class="btn btn-primary">Register Guest</button>
-              </div>
-            </form>
-            <div id="registrationMsg"></div>
-          </div>
-        </section>
-
         <!-- Section: Create a Booking -->
         <section id="booking-section" class="panel" style="display: none;">
           <div class="panel-header">
             <div>
               <h2>Create a Booking</h2>
-              <p class="panel-desc">Enter the passport of a registered guest and the stay dates. Only rooms that are free for the whole stay are offered.</p>
+              <p class="panel-desc">Enter the passport of a registered guest, choose a room, and set the expected arrival time.</p>
             </div>
           </div>
 
           <div class="panel-body">
-            <form id="bookingForm" class="grid-form booking-form">
+            <form id="bookingForm" class="grid-form">
               <div class="field-group">
                 <label for="bookingGuestPassport">Guest Passport</label>
                 <input type="text" id="bookingGuestPassport" placeholder="Passport / ID number" maxlength="20" autocomplete="off" required />
               </div>
               <div class="field-group">
-                <label for="bookingExpectedArrival">Check-in (arrival)</label>
-                <input type="datetime-local" id="bookingExpectedArrival" required />
-              </div>
-              <div class="field-group">
-                <label for="bookingExpectedDeparture">Check-out (departure)</label>
-                <input type="datetime-local" id="bookingExpectedDeparture" required />
-              </div>
-              <div class="field-group">
-                <label for="bookingRoomType">Room type</label>
-                <select id="bookingRoomType">
-                  <option value="">Any type</option>
-                  <option value="SINGLE">Single</option>
-                  <option value="DOUBLE">Double</option>
-                  <option value="TWIN">Twin</option>
-                  <option value="TRIPLE">Triple</option>
-                  <option value="FAMILY">Family</option>
-                  <option value="SUITE">Suite</option>
-                  <option value="DELUXE">Deluxe</option>
-                  <option value="PRESIDENTIAL">Presidential</option>
-                </select>
-              </div>
-              <div class="field-group span-2">
-                <label for="bookingRoomId">Free room for these dates</label>
+                <label for="bookingRoomId">Room</label>
                 <select id="bookingRoomId" required>
-                  <option value="">Choose check-in and check-out dates first</option>
+                  <option value="">Loading rooms...</option>
                 </select>
+              </div>
+              <div class="field-group">
+                <label for="bookingExpectedArrival">Expected Arrival</label>
+                <input type="datetime-local" id="bookingExpectedArrival" required />
               </div>
               <div class="field-action">
                 <button type="submit" class="btn btn-primary">Create Booking</button>
               </div>
             </form>
             <div id="bookingMsg"></div>
+          </div>
+        </section>
+
+        <!-- Section 1: Passport Verification -->
         <section id="checkin-section" class="panel">
           <div class="panel-header">
             <div>
@@ -190,9 +174,7 @@
                   <th class="text-right">Action</th>
                 </tr>
               </thead>
-              <tbody id="queueTbody">
-                <!-- Populated by app.js -->
-              </tbody>
+              <tbody id="queueTbody"></tbody>
             </table>
           </div>
         </section>
@@ -239,9 +221,7 @@
                   <th class="text-right">Action</th>
                 </tr>
               </thead>
-              <tbody id="refundsTbody">
-                <!-- Populated by app.js -->
-              </tbody>
+              <tbody id="refundsTbody"></tbody>
             </table>
           </div>
         </section>
@@ -261,9 +241,7 @@
                 <div class="gis-stars-row">★★★★★</div>
                 <div id="gisTotalCount" class="gis-count-label">4 reviews on 2GIS</div>
               </div>
-              <div id="gisBarsContainer" class="gis-bars">
-                <!-- Rating distribution bars -->
-              </div>
+              <div id="gisBarsContainer" class="gis-bars"></div>
             </div>
           </div>
 
@@ -294,13 +272,12 @@
             <div id="reviewMsg"></div>
           </div>
 
-          <div id="reviewsList" class="reviews-list">
-            <!-- Populated by app.js -->
-          </div>
+          <div id="reviewsList" class="reviews-list"></div>
         </section>
       </main>
     </div>
   </div>
 
+  <script src="app.js"></script>
 </body>
 </html>

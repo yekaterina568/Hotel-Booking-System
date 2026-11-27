@@ -1,6 +1,125 @@
 const API_BASE_URL = 'http://localhost:8080/api';
 
-// Стартовые отзывы об отеле в стиле 2GIS (сохраняются в localStorage)
+// Авторизация для Spring Security (admin:1234)
+const AUTH_HEADER = 'Basic ' + btoa('admin:1234');
+const originalFetch = window.fetch;
+window.fetch = (url, options = {}) => {
+  if (typeof url === 'string' && url.startsWith(API_BASE_URL)) {
+    options.headers = {
+      ...options.headers,
+      'Authorization': AUTH_HEADER
+    };
+  }
+  return originalFetch(url, options);
+};
+
+// База зарегистрированных операторов Front-Desk (сохраняется в localStorage)
+const DEFAULT_OPERATORS = [
+  { username: 'admin', password: '1234', fullName: 'System Administrator', role: 'Front-Desk Admin' }
+];
+
+function getOperators() {
+  return JSON.parse(localStorage.getItem('pms_operators')) || DEFAULT_OPERATORS;
+}
+
+function saveOperators(list) {
+  localStorage.setItem('pms_operators', JSON.stringify(list));
+}
+
+// Управление экраном входа / регистрации оператора
+function checkOperatorSession() {
+  const activeUser = JSON.parse(sessionStorage.getItem('pms_active_operator'));
+  const authScreen = document.getElementById('authScreen');
+  const appLayout = document.getElementById('appLayout');
+
+  if (activeUser) {
+    authScreen.style.display = 'none';
+    appLayout.style.display = 'flex';
+    document.getElementById('currentOperatorName').textContent = activeUser.fullName;
+    document.getElementById('currentOperatorRole').textContent = activeUser.role;
+    loadBookingOptions();
+    loadPriorityQueue();
+    loadRefunds();
+    renderReviews();
+  } else {
+    authScreen.style.display = 'flex';
+    appLayout.style.display = 'none';
+  }
+}
+
+// Переключение вкладок Sign In / Register на стартовом экране
+document.getElementById('tabLoginBtn').addEventListener('click', () => {
+  document.getElementById('tabLoginBtn').classList.add('active');
+  document.getElementById('tabRegisterBtn').classList.remove('active');
+  document.getElementById('operatorLoginForm').style.display = 'flex';
+  document.getElementById('operatorRegisterForm').style.display = 'none';
+  document.getElementById('authMsg').textContent = '';
+  document.getElementById('authMsg').className = '';
+});
+
+document.getElementById('tabRegisterBtn').addEventListener('click', () => {
+  document.getElementById('tabRegisterBtn').classList.add('active');
+  document.getElementById('tabLoginBtn').classList.remove('active');
+  document.getElementById('operatorRegisterForm').style.display = 'flex';
+  document.getElementById('operatorLoginForm').style.display = 'none';
+  document.getElementById('authMsg').textContent = '';
+  document.getElementById('authMsg').className = '';
+});
+
+// Регистрация нового Front-Desk оператора
+document.getElementById('operatorRegisterForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const fullName = document.getElementById('regOpFullName').value.trim();
+  const username = document.getElementById('regOpUsername').value.trim();
+  const role = document.getElementById('regOpRole').value;
+  const password = document.getElementById('regOpPassword').value;
+  const authMsg = document.getElementById('authMsg');
+
+  const operators = getOperators();
+  if (operators.some(op => op.username.toLowerCase() === username.toLowerCase())) {
+    authMsg.textContent = `❌ Username "${username}" is already registered.`;
+    authMsg.className = 'msg error';
+    return;
+  }
+
+  const newOperator = { username, password, fullName, role };
+  operators.push(newOperator);
+  saveOperators(operators);
+  sessionStorage.setItem('pms_active_operator', JSON.stringify(newOperator));
+  e.target.reset();
+  checkOperatorSession();
+});
+
+// Вход существующего Front-Desk оператора
+document.getElementById('operatorLoginForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const authMsg = document.getElementById('authMsg');
+
+  const operators = getOperators();
+  const found = operators.find(
+    op => op.username.toLowerCase() === username.toLowerCase() && op.password === password
+  );
+
+  if (!found) {
+    authMsg.textContent = '❌ Invalid username or password. Register a new account or use admin / 1234.';
+    authMsg.className = 'msg error';
+    return;
+  }
+
+  sessionStorage.setItem('pms_active_operator', JSON.stringify(found));
+  e.target.reset();
+  checkOperatorSession();
+});
+
+// Выход из аккаунта (Sign out)
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  sessionStorage.removeItem('pms_active_operator');
+  checkOperatorSession();
+});
+
+// Стартовые отзывы об отеле в стиле 2GIS
 const DEFAULT_REVIEWS = [
   {
     id: 1,
@@ -35,11 +154,10 @@ const DEFAULT_REVIEWS = [
 let hotelReviews = JSON.parse(localStorage.getItem('grand_almaty_2gis_reviews')) || DEFAULT_REVIEWS;
 let selectedRating = 5;
 
-// 0. Переключение страниц в боковом меню
+// Переключение разделов портала
 function switchTab(tabName) {
   const sections = {
     checkin: ['checkin-section', 'priority-queue-section'],
-    registration: ['registration-section'],
     booking: ['booking-section'],
     refunds: ['refunds-section'],
     reviews: ['reviews-section']
@@ -47,7 +165,6 @@ function switchTab(tabName) {
 
   const titles = {
     checkin: 'Front-Desk Operations & Arrival Management',
-    registration: 'Guest Registration & Onboarding',
     booking: 'New Reservation & Room Assignment',
     refunds: 'Billing & Refund Management',
     reviews: '2GIS Hotel Feedback & Guest Rating'
@@ -77,205 +194,88 @@ document.querySelectorAll('.nav-item[data-tab]').forEach(link => {
   });
 });
 
-// 1. Регистрация нового гостя (POST /api/guests -> сохранение в PostgreSQL)
-const registrationForm = document.getElementById('registrationForm');
-if (registrationForm) {
-  registrationForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const firstName = document.getElementById('regFirstName').value.trim();
-    const lastName = document.getElementById('regLastName').value.trim();
-    const passportNum = document.getElementById('regPassport').value.trim().toUpperCase();
-    const phone = document.getElementById('regPhone').value.trim();
-    const regMsg = document.getElementById('registrationMsg');
-    const btn = document.getElementById('regSubmitBtn');
-
-    btn.disabled = true;
-    btn.textContent = 'Registering...';
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/guests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          passportNum,
-          phone
-        })
-      });
-
-      if (response.ok) {
-        const created = await response.json();
-        regMsg.textContent = `✓ Guest ${created.firstName} ${created.lastName} (Passport: ${created.passportNum}) registered in Database!`;
-        regMsg.className = 'msg success';
-        registrationForm.reset();
-        loadPriorityQueue();
-      } else {
-        const errText = await response.text();
-        regMsg.textContent = `❌ Registration failed (${response.status}): ${errText || 'Check passport uniqueness'}`;
-        regMsg.className = 'msg error';
-      }
-    } catch (err) {
-      regMsg.textContent = '❌ Server connection error. Make sure Spring Boot is running on port 8080.';
-      regMsg.className = 'msg error';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Register Guest';
-    }
-  });
-}
-
-// 2. Загрузка списка комнат для формы создания бронирования
+// Загрузка списка комнат
 async function loadBookingOptions() {
   const select = document.getElementById('bookingRoomId');
-  const arrival = document.getElementById('bookingExpectedArrival').value;
-  const departure = document.getElementById('bookingExpectedDeparture').value;
-  const roomType = document.getElementById('bookingRoomType').value;
   if (!select) return;
 
-  availableRooms = [];
-  updateBookingSummary();
-
-  if (!arrival || !departure) {
-    select.innerHTML = '<option value="">Choose check-in and check-out dates first</option>';
-    return;
-  }
-  if (new Date(departure) <= new Date(arrival)) {
-    select.innerHTML = '<option value="">Check-out must be after check-in</option>';
-    return;
-  }
-
-  select.innerHTML = '<option value="">Searching free rooms...</option>';
-  const params = new URLSearchParams({ from: toIsoWithZone(arrival), to: toIsoWithZone(departure) });
-  if (roomType) params.append('roomType', roomType);
-
   try {
-    const response = await hotelAuth.fetch(`${API_BASE_URL}/rooms/available?${params}`);
+    const response = await fetch(`${API_BASE_URL}/rooms`);
     if (response.ok) {
-      availableRooms = await response.json();
-      if (availableRooms.length === 0) {
-        select.innerHTML = '<option value="">No free rooms for these dates</option>';
-        return;
-      }
-      select.innerHTML = `<option value="">${availableRooms.length} free room(s) — select one...</option>`;
-      availableRooms.forEach(room => {
+      const rooms = await response.json();
+      select.innerHTML = '<option value="">Select a room...</option>';
+      rooms.forEach(room => {
         const option = document.createElement('option');
         option.value = room.roomId;
-        const price = room.pricePerNight == null ? '' : ` · ${moneyFormat.format(room.pricePerNight)}/night`;
-        option.textContent = `Room ${room.roomNumber} (${room.roomType || 'Standard'})${price}`;
+        option.textContent = `Room ${room.roomNumber} (${room.roomType || 'Standard'} — ${room.cleaningState})`;
         select.appendChild(option);
       });
       return;
     }
   } catch (err) {
-    console.warn('Could not load free rooms:', err);
+    console.warn('Could not load rooms:', err);
   }
-  select.innerHTML = '<option value="">Could not load rooms — is the backend running?</option>';
+  select.innerHTML = '<option value="">No rooms available</option>';
 }
 
-// Подсказка под формой: сколько ночей и сколько это будет стоить
-function updateBookingSummary() {
-  const summary = document.getElementById('bookingSummary');
-  if (!summary) return;
-  const arrival = document.getElementById('bookingExpectedArrival').value;
-  const departure = document.getElementById('bookingExpectedDeparture').value;
-  const roomId = Number(document.getElementById('bookingRoomId').value);
-  const room = availableRooms.find(r => r.roomId === roomId);
-
-  if (!arrival || !departure || new Date(departure) <= new Date(arrival)) {
-    summary.textContent = '';
-    return;
-  }
-  const nights = countNights(arrival, departure);
-  if (room && room.pricePerNight != null) {
-    summary.textContent = `${nights} night(s) × ${moneyFormat.format(room.pricePerNight)} = ${moneyFormat.format(nights * room.pricePerNight)}`;
-  } else {
-    summary.textContent = `${nights} night(s)`;
-  }
-}
-
-['bookingExpectedArrival', 'bookingExpectedDeparture', 'bookingRoomType'].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('change', loadAvailableRooms);
-});
-const bookingRoomSelect = document.getElementById('bookingRoomId');
-if (bookingRoomSelect) bookingRoomSelect.addEventListener('change', updateBookingSummary);
-
-// Обработчик создания новой брони (New Booking)
+// Создание новой брони
 const bookingForm = document.getElementById('bookingForm');
 if (bookingForm) {
   bookingForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const passport = document.getElementById('bookingGuestPassport').value.trim().toUpperCase();
     const roomId = Number(document.getElementById('bookingRoomId').value);
-    const arrival = document.getElementById('bookingExpectedArrival').value;
-    const departure = document.getElementById('bookingExpectedDeparture').value;
+    const expectedArrival = document.getElementById('bookingExpectedArrival').value;
     const bookingMsg = document.getElementById('bookingMsg');
 
-    if (new Date(departure) <= new Date(arrival)) {
-      bookingMsg.textContent = '❌ Check-out must be after check-in.';
-      bookingMsg.className = 'feedback-banner error';
-      return;
-    }
-
     try {
-      const guestsRes = await hotelAuth.fetch(`${API_BASE_URL}/guests`);
+      const guestsRes = await fetch(`${API_BASE_URL}/guests`);
       const guests = guestsRes.ok ? await guestsRes.json() : [];
       const guest = guests.find(g => g.passportNum === passport);
 
       if (!guest) {
-        bookingMsg.textContent = `❌ Guest with passport ${passport} not found. Register guest first.`;
+        bookingMsg.textContent = `❌ Guest with passport ${passport} not found in database.`;
         bookingMsg.className = 'msg error';
         return;
       }
 
-      const response = await hotelAuth.fetch(`${API_BASE_URL}/bookings`, {
+      const response = await fetch(`${API_BASE_URL}/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          guest: { guestId: guest.guestId },
-          room: { roomId: roomId },
-          expectedArrival: toIsoWithZone(arrival),
-          expectedDeparture: toIsoWithZone(departure)
+          guestId: guest.guestId,
+          roomId: roomId,
+          expectedArrival: expectedArrival,
+          state: 'CONFIRMED'
         })
       });
 
       if (response.ok) {
-        const booking = await response.json();
-        const room = availableRooms.find(r => r.roomId === roomId);
-        const nights = booking.nights ?? countNights(arrival, departure);
-        bookingMsg.textContent = `✓ Booking #${booking.bookingId} created for ${guest.firstName} ${guest.lastName}: ` +
-          `Room ${room ? room.roomNumber : roomId}, ${nights} night(s).`;
-        bookingMsg.className = 'feedback-banner success';
+        bookingMsg.textContent = `✓ Booking created for ${guest.firstName} ${guest.lastName}!`;
+        bookingMsg.className = 'msg success';
         bookingForm.reset();
-        loadAvailableRooms();
         loadPriorityQueue();
         return;
       }
-
-      bookingMsg.textContent = `❌ ${await readError(response, 'Failed to create booking.')}`;
-      bookingMsg.className = 'feedback-banner error';
-      if (response.status === 409) loadAvailableRooms();
-      return;
     } catch (err) {
       console.warn('Booking error:', err);
     }
 
-    bookingMsg.textContent = '❌ Failed to create booking. Check backend connection.';
-    bookingMsg.className = 'feedback-banner error';
+    bookingMsg.textContent = '❌ Failed to create booking.';
+    bookingMsg.className = 'msg error';
   });
 }
 
-// 3. Загрузка очереди раннего заселения из БД
+// Очередь раннего заселения
 async function loadPriorityQueue() {
   const tbody = document.getElementById('queueTbody');
   tbody.innerHTML = '';
 
   try {
     const [bookingsResponse, roomsResponse, guestsResponse] = await Promise.all([
-      hotelAuth.fetch(`${API_BASE_URL}/bookings`),
-      hotelAuth.fetch(`${API_BASE_URL}/rooms`),
-      hotelAuth.fetch(`${API_BASE_URL}/guests`)
+      fetch(`${API_BASE_URL}/bookings`),
+      fetch(`${API_BASE_URL}/rooms`),
+      fetch(`${API_BASE_URL}/guests`)
     ]);
 
     if (bookingsResponse.ok && roomsResponse.ok && guestsResponse.ok) {
@@ -332,10 +332,10 @@ async function loadPriorityQueue() {
   tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#b91c1c;">Backend unavailable. Start Spring Boot on port 8080.</td></tr>';
 }
 
-// 4. Автоматическое заселение
+// Автозаселение
 async function autoAssign(bookingId, roomNumber) {
   try {
-    const response = await hotelAuth.fetch(`${API_BASE_URL}/bookings/${bookingId}/check-in`, {
+    const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/check-in`, {
       method: 'POST'
     });
 
@@ -347,10 +347,10 @@ async function autoAssign(bookingId, roomNumber) {
   } catch (err) {
     console.warn('Check-in error:', err);
   }
-  alert('❌ Could not complete check-in. Verify backend endpoint.');
+  alert('❌ Could not complete check-in.');
 }
 
-// 5. Проверка паспорта по таблице guests в БД
+// Проверка паспорта
 document.getElementById('validateBtn').addEventListener('click', async () => {
   const passportVal = document.getElementById('passportInput').value.trim().toUpperCase();
   const msg = document.getElementById('validationMsg');
@@ -358,23 +358,23 @@ document.getElementById('validateBtn').addEventListener('click', async () => {
 
   if (!passportRegex.test(passportVal)) {
     msg.textContent = '❌ Error: Invalid passport format. Expected 7 to 12 alphanumeric characters.';
-    msg.className = 'feedback-banner error';
+    msg.className = 'msg error';
     return;
   }
 
   try {
-    const response = await hotelAuth.fetch(`${API_BASE_URL}/guests`);
+    const response = await fetch(`${API_BASE_URL}/guests`);
     if (response.ok) {
       const guests = await response.json();
       const guest = guests.find(item => item.passportNum === passportVal);
       if (!guest) {
         msg.textContent = `❌ Passport ${passportVal} was not found in the database.`;
-        msg.className = 'feedback-banner error';
+        msg.className = 'msg error';
         return;
       }
 
       msg.textContent = `✓ Verified in DB: Guest ${guest.firstName} ${guest.lastName} (Passport: ${passportVal})`;
-      msg.className = 'feedback-banner success';
+      msg.className = 'msg success';
       return;
     }
   } catch (err) {
@@ -385,13 +385,13 @@ document.getElementById('validateBtn').addEventListener('click', async () => {
   msg.className = 'msg error';
 });
 
-// 6. Загрузка списка возвратов из БД
+// Возвраты (Refunds)
 async function loadRefunds() {
   const tbody = document.getElementById('refundsTbody');
   tbody.innerHTML = '';
 
   try {
-    const response = await hotelAuth.fetch(`${API_BASE_URL}/refunds`);
+    const response = await fetch(`${API_BASE_URL}/refunds`);
     if (response.ok) {
       const refundsData = await response.json();
 
@@ -431,7 +431,6 @@ async function loadRefunds() {
   tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#b91c1c;">Could not load refunds from database.</td></tr>';
 }
 
-// 7. Создание нового возврата (POST /api/refunds)
 document.getElementById('refundForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const bookingId = Number(document.getElementById('refundBookingId').value);
@@ -443,24 +442,22 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
   btn.disabled = true;
   btn.textContent = 'Saving...';
 
-  const payload = {
-    bookingId: bookingId,
-    booking: { bookingId: bookingId },
-    amount: amount,
-    refundReason: reason,
-    state: 'COMPLETED'
-  };
-
   try {
-    const response = await hotelAuth.fetch(`${API_BASE_URL}/refunds`, {
+    const response = await fetch(`${API_BASE_URL}/refunds`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        bookingId,
+        booking: { bookingId },
+        amount,
+        refundReason: reason,
+        state: 'COMPLETED'
+      })
     });
 
     if (response.ok) {
       refundMsg.textContent = `✓ Refund of $${amount.toFixed(2)} for Booking #${bookingId} saved to Database!`;
-      refundMsg.className = 'feedback-banner success';
+      refundMsg.className = 'msg success';
       document.getElementById('refundForm').reset();
       loadRefunds();
     } else {
@@ -468,7 +465,7 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
       refundMsg.className = 'msg error';
     }
   } catch (err) {
-    refundMsg.textContent = '❌ Server connection error. Check Spring Boot on port 8080.';
+    refundMsg.textContent = '❌ Server connection error.';
     refundMsg.className = 'msg error';
   } finally {
     btn.disabled = false;
@@ -476,21 +473,15 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
   }
 });
 
-// 8. Отмена / удаление возврата (DELETE /api/refunds/{id})
 async function cancelRefund(refundId) {
-  if (!confirm(`Cancel and remove Refund #${refundId} from database?`)) {
-    return;
-  }
+  if (!confirm(`Cancel and remove Refund #${refundId} from database?`)) return;
 
   const refundMsg = document.getElementById('refundMsg');
   try {
-    const response = await hotelAuth.fetch(`${API_BASE_URL}/refunds/${refundId}`, {
-      method: 'DELETE'
-    });
-
+    const response = await fetch(`${API_BASE_URL}/refunds/${refundId}`, { method: 'DELETE' });
     if (response.ok) {
       refundMsg.textContent = `✓ Refund #${refundId} cancelled and removed from Database!`;
-      refundMsg.className = 'feedback-banner success';
+      refundMsg.className = 'msg success';
       loadRefunds();
       return;
     }
@@ -502,7 +493,7 @@ async function cancelRefund(refundId) {
   refundMsg.className = 'msg error';
 }
 
-// 9. 2GIS Отзывы и рейтинг об отеле
+// 2GIS Отзывы и рейтинг об отеле
 function renderReviews() {
   const listEl = document.getElementById('reviewsList');
   const avgEl = document.getElementById('gisAvgScore');
@@ -518,7 +509,6 @@ function renderReviews() {
   avgEl.textContent = avg;
   countEl.textContent = `${total} reviews on 2GIS`;
 
-  // Прогресс-бары от 5 до 1 звезды
   barsEl.innerHTML = '';
   for (let star = 5; star >= 1; star--) {
     const count = hotelReviews.filter(r => r.rating === star).length;
@@ -534,15 +524,9 @@ function renderReviews() {
     `;
   }
 
-  // Лента отзывов
   listEl.innerHTML = '';
   hotelReviews.forEach(rev => {
-    const initials = rev.author
-      .split(' ')
-      .map(p => p[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
+    const initials = rev.author.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
     const starsStr = '★'.repeat(rev.rating) + '☆'.repeat(5 - rev.rating);
 
     const item = document.createElement('div');
@@ -564,7 +548,6 @@ function renderReviews() {
   });
 }
 
-// Выбор звёзд в форме отзыва
 document.querySelectorAll('.star-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     selectedRating = Number(btn.dataset.rating);
@@ -574,7 +557,6 @@ document.querySelectorAll('.star-btn').forEach(btn => {
   });
 });
 
-// Добавление нового 2GIS отзыва
 const reviewForm = document.getElementById('reviewForm');
 if (reviewForm) {
   reviewForm.addEventListener('submit', (e) => {
@@ -583,21 +565,10 @@ if (reviewForm) {
     const comment = document.getElementById('reviewComment').value.trim();
     const reviewMsg = document.getElementById('reviewMsg');
 
-    const today = new Date().toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-
-    hotelReviews.unshift({
-      id: Date.now(),
-      author,
-      rating: selectedRating,
-      date: today,
-      comment
-    });
-
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    hotelReviews.unshift({ id: Date.now(), author, rating: selectedRating, date: today, comment });
     localStorage.setItem('grand_almaty_2gis_reviews', JSON.stringify(hotelReviews));
+
     reviewMsg.textContent = '✓ Thank you! Your 2GIS review has been published and hotel rating updated.';
     reviewMsg.className = 'msg success';
     reviewForm.reset();
@@ -605,8 +576,5 @@ if (reviewForm) {
   });
 }
 
-// Инициализация при открытии страницы
-loadBookingOptions();
-loadPriorityQueue();
-loadRefunds();
-renderReviews();
+// Запуск проверки сессии при загрузке страницы
+checkOperatorSession();
