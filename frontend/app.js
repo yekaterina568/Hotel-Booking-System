@@ -1,41 +1,73 @@
 const API_BASE_URL = 'http://localhost:8080/api';
 
-let localQueue = [
-  { booking_id: 101, full_name: 'Aruzhan Tanatar', room_number: 101, expected_arrival: '14:00', cleaning_status: 'Cleaned' }
-];
-let localRefunds = [
-  { refund_id: 1, booking_id: 98, amount: '120.00', refund_reason: 'Flight delayed', status: 'Completed' }
+// Стартовые отзывы об отеле в стиле 2GIS (сохраняются в localStorage)
+const DEFAULT_REVIEWS = [
+  {
+    id: 1,
+    author: 'Aruzhan Tanatar',
+    rating: 5,
+    date: 'Nov 24, 2026',
+    comment: 'Отличный отель в центре Алматы! Быстрое заселение на ресепшене, номера идеально чистые, вид на горы потрясающий.'
+  },
+  {
+    id: 2,
+    author: 'Dias Kassymov',
+    rating: 5,
+    date: 'Nov 21, 2026',
+    comment: 'Очень вежливый персонал. Выдали RFID-ключ за пару минут, завтраки вкусные, всё на высшем уровне.'
+  },
+  {
+    id: 3,
+    author: 'Elena Kim',
+    rating: 4,
+    date: 'Nov 18, 2026',
+    comment: 'Уютные комнаты и удобное расположение рядом с проспектом Достык. В следующий раз снова выберу Grand Almaty.'
+  },
+  {
+    id: 4,
+    author: 'Arman Suleimenov',
+    rating: 5,
+    date: 'Nov 15, 2026',
+    comment: 'Останавливался в командировке. Стабильный Wi-Fi, тишина в номерах и оперативное решение любых вопросов.'
+  }
 ];
 
-// 0. Переключение страниц (вкладок) в боковом меню
+let hotelReviews = JSON.parse(localStorage.getItem('grand_almaty_2gis_reviews')) || DEFAULT_REVIEWS;
+let selectedRating = 5;
+
+// 0. Переключение страниц в боковом меню
 function switchTab(tabName) {
-  const checkinSec = document.getElementById('checkin-section');
-  const queueSec = document.getElementById('priority-queue-section');
-  const refundsSec = document.getElementById('refunds-section');
-  const bookingSec = document.getElementById('booking-section');
-  const pageTitle = document.getElementById('pageTitle');
-  const navItems = document.querySelectorAll('.nav-item[data-tab]');
+  const sections = {
+    checkin: ['checkin-section', 'priority-queue-section'],
+    registration: ['registration-section'],
+    booking: ['booking-section'],
+    refunds: ['refunds-section'],
+    reviews: ['reviews-section']
+  };
 
-  navItems.forEach(item => {
+  const titles = {
+    checkin: 'Front-Desk Operations & Arrival Management',
+    registration: 'Guest Registration & Onboarding',
+    booking: 'New Reservation & Room Assignment',
+    refunds: 'Billing & Refund Management',
+    reviews: '2GIS Hotel Feedback & Guest Rating'
+  };
+
+  document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
     item.classList.toggle('active', item.dataset.tab === tabName);
   });
 
-  checkinSec.style.display = 'none';
-  queueSec.style.display = 'none';
-  refundsSec.style.display = 'none';
-  bookingSec.style.display = 'none';
+  Object.values(sections).flat().forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
 
-  if (tabName === 'refunds') {
-    refundsSec.style.display = 'block';
-    pageTitle.textContent = 'Billing & Refund Management';
-  } else if (tabName === 'booking') {
-    bookingSec.style.display = 'block';
-    pageTitle.textContent = 'New Reservation & Room Assignment';
-  } else {
-    checkinSec.style.display = 'block';
-    queueSec.style.display = 'block';
-    pageTitle.textContent = 'Front-Desk Operations & Arrival Management';
-  }
+  (sections[tabName] || sections.checkin).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'block';
+  });
+
+  document.getElementById('pageTitle').textContent = titles[tabName] || titles.checkin;
 }
 
 document.querySelectorAll('.nav-item[data-tab]').forEach(link => {
@@ -45,7 +77,55 @@ document.querySelectorAll('.nav-item[data-tab]').forEach(link => {
   });
 });
 
-// 0.5 Загрузка списка комнат для формы создания бронирования
+// 1. Регистрация нового гостя (POST /api/guests -> сохранение в PostgreSQL)
+const registrationForm = document.getElementById('registrationForm');
+if (registrationForm) {
+  registrationForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const firstName = document.getElementById('regFirstName').value.trim();
+    const lastName = document.getElementById('regLastName').value.trim();
+    const passportNum = document.getElementById('regPassport').value.trim().toUpperCase();
+    const phone = document.getElementById('regPhone').value.trim();
+    const regMsg = document.getElementById('registrationMsg');
+    const btn = document.getElementById('regSubmitBtn');
+
+    btn.disabled = true;
+    btn.textContent = 'Registering...';
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/guests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          passportNum,
+          phone
+        })
+      });
+
+      if (response.ok) {
+        const created = await response.json();
+        regMsg.textContent = `✓ Guest ${created.firstName} ${created.lastName} (Passport: ${created.passportNum}) registered in Database!`;
+        regMsg.className = 'msg success';
+        registrationForm.reset();
+        loadPriorityQueue();
+      } else {
+        const errText = await response.text();
+        regMsg.textContent = `❌ Registration failed (${response.status}): ${errText || 'Check passport uniqueness'}`;
+        regMsg.className = 'msg error';
+      }
+    } catch (err) {
+      regMsg.textContent = '❌ Server connection error. Make sure Spring Boot is running on port 8080.';
+      regMsg.className = 'msg error';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Register Guest';
+    }
+  });
+}
+
+// 2. Загрузка списка комнат для формы создания бронирования
 async function loadBookingOptions() {
   const select = document.getElementById('bookingRoomId');
   if (!select) return;
@@ -85,7 +165,7 @@ if (bookingForm) {
       const guest = guests.find(g => g.passportNum === passport);
 
       if (!guest) {
-        bookingMsg.textContent = `❌ Guest with passport ${passport} not found in database.`;
+        bookingMsg.textContent = `❌ Guest with passport ${passport} not found. Register guest first.`;
         bookingMsg.className = 'msg error';
         return;
       }
@@ -117,12 +197,11 @@ if (bookingForm) {
   });
 }
 
-// 1. Загрузка очереди чистых комнат из БД через Backend API
+// 3. Загрузка очереди раннего заселения из БД
 async function loadPriorityQueue() {
   const tbody = document.getElementById('queueTbody');
   tbody.innerHTML = '';
 
-  let queueData = localQueue;
   try {
     const [bookingsResponse, roomsResponse, guestsResponse] = await Promise.all([
       fetch(`${API_BASE_URL}/bookings`),
@@ -136,7 +215,8 @@ async function loadPriorityQueue() {
         roomsResponse.json(),
         guestsResponse.json()
       ]);
-      queueData = bookings
+
+      const queueData = bookings
         .filter(booking => booking.state === 'CONFIRMED')
         .map(booking => {
           const room = rooms.find(item => item.roomId === booking.roomId);
@@ -152,30 +232,38 @@ async function loadPriorityQueue() {
           };
         })
         .filter(Boolean);
+
+      if (queueData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">No confirmed arrivals ready for check-in.</td></tr>';
+        return;
+      }
+
+      queueData.forEach(b => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>#${b.booking_id}</td>
+          <td>${b.full_name}</td>
+          <td><strong>No. ${b.room_number}</strong></td>
+          <td>${b.expected_arrival}</td>
+          <td><span class="badge badge-cleaned">${b.cleaning_status}</span></td>
+          <td class="text-right">
+            <button class="btn-assign" onclick="autoAssign(${b.booking_id}, ${b.room_number})">
+              Auto Check-in
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      return;
     }
   } catch (err) {
-    console.warn('Backend offline, using cached state:', err);
+    console.warn('Backend offline:', err);
   }
 
-  queueData.forEach(b => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>#${b.booking_id}</td>
-      <td>${b.full_name}</td>
-      <td><strong>No. ${b.room_number}</strong></td>
-      <td>${b.expected_arrival}</td>
-      <td><span class="badge badge-cleaned">${b.cleaning_status || 'Cleaned'}</span></td>
-      <td class="text-right">
-        <button class="btn-assign" onclick="autoAssign(${b.booking_id}, ${b.room_number})">
-          Auto Check-in
-        </button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#b91c1c;">Backend unavailable. Start Spring Boot on port 8080.</td></tr>';
 }
 
-// 2. Отправка запроса на автоматическое заселение (POST в БД)
+// 4. Автоматическое заселение
 async function autoAssign(bookingId, roomNumber) {
   try {
     const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/check-in`, {
@@ -183,17 +271,17 @@ async function autoAssign(bookingId, roomNumber) {
     });
 
     if (response.ok) {
-      alert(`✓ Database updated: Guest booking #${bookingId} checked into Room No. ${roomNumber}. RFID Keycard encoded!`);
+      alert(`✓ Database updated: Booking #${bookingId} checked into Room No. ${roomNumber}. RFID Keycard encoded!`);
       loadPriorityQueue();
       return;
     }
   } catch (err) {
-    console.warn('API call fallback:', err);
+    console.warn('Check-in error:', err);
   }
-  alert(`✓ Guest booking #${bookingId} checked into Room No. ${roomNumber}! RFID Keycard encoded.`);
+  alert('❌ Could not complete check-in. Verify backend endpoint.');
 }
 
-// 3. Валидация паспорта с проверкой через БД
+// 5. Проверка паспорта по таблице guests в БД
 document.getElementById('validateBtn').addEventListener('click', async () => {
   const passportVal = document.getElementById('passportInput').value.trim().toUpperCase();
   const msg = document.getElementById('validationMsg');
@@ -221,64 +309,70 @@ document.getElementById('validateBtn').addEventListener('click', async () => {
       return;
     }
   } catch (err) {
-    console.warn('API call fallback:', err);
+    console.warn('Validation error:', err);
   }
 
-  msg.textContent = `✓ Passport ${passportVal} passed format validation & DB lookup.`;
-  msg.className = 'msg success';
+  msg.textContent = '❌ Server connection error during passport lookup.';
+  msg.className = 'msg error';
 });
 
-// 4. Загрузка списка возвратов из таблицы Refunds в БД
+// 6. Загрузка списка возвратов из БД
 async function loadRefunds() {
   const tbody = document.getElementById('refundsTbody');
   tbody.innerHTML = '';
 
-  let refundsData = localRefunds;
   try {
     const response = await fetch(`${API_BASE_URL}/refunds`);
     if (response.ok) {
-      refundsData = await response.json();
+      const refundsData = await response.json();
+
+      if (refundsData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">No refunds found in database.</td></tr>';
+        return;
+      }
+
+      refundsData.forEach(r => {
+        const id = r.refundId ?? r.refund_id;
+        const bId = r.booking?.bookingId ?? r.bookingId ?? r.booking_id;
+        const amt = r.amount;
+        const reason = r.refundReason ?? r.refund_reason;
+        const st = r.state ?? r.status ?? 'COMPLETED';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>#${id}</td>
+          <td>#${bId}</td>
+          <td>$${amt}</td>
+          <td>${reason}</td>
+          <td><span class="badge badge-cleaned">${st}</span></td>
+          <td class="text-right">
+            <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="cancelRefund(${id})">
+              Cancel
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      return;
     }
   } catch (err) {
-    console.warn('Backend offline, using cached refunds:', err);
+    console.warn('Refunds load error:', err);
   }
 
-  if (refundsData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">No refunds found in database.</td></tr>';
-    return;
-  }
-
-  refundsData.forEach(r => {
-    const id = r.refundId ?? r.refund_id;
-    const bId = r.booking?.bookingId ?? r.bookingId ?? r.booking_id;
-    const amt = r.amount;
-    const reason = r.refundReason ?? r.refund_reason;
-    const st = r.state ?? r.status ?? 'COMPLETED';
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>#${id}</td>
-      <td>#${bId}</td>
-      <td>$${amt}</td>
-      <td>${reason}</td>
-      <td><span class="badge badge-cleaned">${st}</span></td>
-      <td class="text-right">
-        <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="cancelRefund(${id})">
-          Cancel
-        </button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#b91c1c;">Could not load refunds from database.</td></tr>';
 }
 
-// 5. Создание нового возврата (POST /api/refunds -> запись в БД)
+// 7. Создание нового возврата (POST /api/refunds)
 document.getElementById('refundForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const bookingId = Number(document.getElementById('refundBookingId').value);
   const amount = parseFloat(document.getElementById('refundAmount').value);
   const reason = document.getElementById('refundReason').value;
   const refundMsg = document.getElementById('refundMsg');
+  const btn = document.getElementById('refundSubmitBtn');
+
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
 
   const payload = {
     bookingId: bookingId,
@@ -300,26 +394,20 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
       refundMsg.className = 'msg success';
       document.getElementById('refundForm').reset();
       loadRefunds();
-      return;
+    } else {
+      refundMsg.textContent = `❌ Error (${response.status}): Booking #${bookingId} does not exist or invalid refund data.`;
+      refundMsg.className = 'msg error';
     }
   } catch (err) {
-    console.warn('API call fallback:', err);
+    refundMsg.textContent = '❌ Server connection error. Check Spring Boot on port 8080.';
+    refundMsg.className = 'msg error';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Issue Refund';
   }
-
-  localRefunds.push({
-    refund_id: localRefunds.length + 1,
-    booking_id: bookingId,
-    amount: amount.toFixed(2),
-    refund_reason: reason,
-    status: 'COMPLETED'
-  });
-  refundMsg.textContent = `✓ Refund of $${amount.toFixed(2)} for Booking #${bookingId} processed!`;
-  refundMsg.className = 'msg success';
-  document.getElementById('refundForm').reset();
-  loadRefunds();
 });
 
-// 6. Отмена / удаление возврата (DELETE /api/refunds/{id} -> удаление из БД)
+// 8. Отмена / удаление возврата (DELETE /api/refunds/{id})
 async function cancelRefund(refundId) {
   if (!confirm(`Cancel and remove Refund #${refundId} from database?`)) {
     return;
@@ -338,16 +426,118 @@ async function cancelRefund(refundId) {
       return;
     }
   } catch (err) {
-    console.warn('API delete fallback:', err);
+    console.warn('Delete error:', err);
   }
 
-  localRefunds = localRefunds.filter(r => (r.refundId ?? r.refund_id) !== refundId);
-  refundMsg.textContent = `✓ Refund #${refundId} cancelled!`;
-  refundMsg.className = 'msg success';
-  loadRefunds();
+  refundMsg.textContent = `❌ Failed to cancel Refund #${refundId}.`;
+  refundMsg.className = 'msg error';
+}
+
+// 9. 2GIS Отзывы и рейтинг об отеле
+function renderReviews() {
+  const listEl = document.getElementById('reviewsList');
+  const avgEl = document.getElementById('gisAvgScore');
+  const countEl = document.getElementById('gisTotalCount');
+  const barsEl = document.getElementById('gisBarsContainer');
+
+  if (!listEl) return;
+
+  const total = hotelReviews.length;
+  const sum = hotelReviews.reduce((acc, r) => acc + r.rating, 0);
+  const avg = total > 0 ? (sum / total).toFixed(1) : '5.0';
+
+  avgEl.textContent = avg;
+  countEl.textContent = `${total} reviews on 2GIS`;
+
+  // Прогресс-бары от 5 до 1 звезды
+  barsEl.innerHTML = '';
+  for (let star = 5; star >= 1; star--) {
+    const count = hotelReviews.filter(r => r.rating === star).length;
+    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+    barsEl.innerHTML += `
+      <div class="gis-bar-row">
+        <span>${star}★</span>
+        <div class="gis-bar-track">
+          <div class="gis-bar-fill" style="width: ${pct}%"></div>
+        </div>
+        <span>${count}</span>
+      </div>
+    `;
+  }
+
+  // Лента отзывов
+  listEl.innerHTML = '';
+  hotelReviews.forEach(rev => {
+    const initials = rev.author
+      .split(' ')
+      .map(p => p[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+    const starsStr = '★'.repeat(rev.rating) + '☆'.repeat(5 - rev.rating);
+
+    const item = document.createElement('div');
+    item.className = 'review-item';
+    item.innerHTML = `
+      <div class="review-top">
+        <div class="review-author">
+          <div class="review-avatar">${initials}</div>
+          <div>
+            <div class="review-name">${rev.author}</div>
+            <div class="review-date">${rev.date} • Verified Stay via 2GIS</div>
+          </div>
+        </div>
+        <div class="review-stars">${starsStr} (${rev.rating}.0)</div>
+      </div>
+      <div class="review-text">${rev.comment}</div>
+    `;
+    listEl.appendChild(item);
+  });
+}
+
+// Выбор звёзд в форме отзыва
+document.querySelectorAll('.star-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedRating = Number(btn.dataset.rating);
+    document.querySelectorAll('.star-btn').forEach(b => {
+      b.classList.toggle('selected', Number(b.dataset.rating) === selectedRating);
+    });
+  });
+});
+
+// Добавление нового 2GIS отзыва
+const reviewForm = document.getElementById('reviewForm');
+if (reviewForm) {
+  reviewForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const author = document.getElementById('reviewAuthor').value.trim();
+    const comment = document.getElementById('reviewComment').value.trim();
+    const reviewMsg = document.getElementById('reviewMsg');
+
+    const today = new Date().toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    hotelReviews.unshift({
+      id: Date.now(),
+      author,
+      rating: selectedRating,
+      date: today,
+      comment
+    });
+
+    localStorage.setItem('grand_almaty_2gis_reviews', JSON.stringify(hotelReviews));
+    reviewMsg.textContent = '✓ Thank you! Your 2GIS review has been published and hotel rating updated.';
+    reviewMsg.className = 'msg success';
+    reviewForm.reset();
+    renderReviews();
+  });
 }
 
 // Инициализация при открытии страницы
 loadBookingOptions();
 loadPriorityQueue();
 loadRefunds();
+renderReviews();

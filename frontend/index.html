@@ -20,8 +20,10 @@
 
       <nav class="nav-menu">
         <a href="#checkin-section" data-tab="checkin" class="nav-item active">Arrivals & Check-in</a>
-        <a href="#refunds-section" data-tab="refunds" class="nav-item">Billing & Refunds</a>
+        <a href="#registration-section" data-tab="registration" class="nav-item">Guest Registration</a>
         <a href="#booking-section" data-tab="booking" class="nav-item">New Booking</a>
+        <a href="#refunds-section" data-tab="refunds" class="nav-item">Billing & Refunds</a>
+        <a href="#reviews-section" data-tab="reviews" class="nav-item">2GIS Reviews & Rating</a>
         <a href="admin.html" class="nav-item">Administration</a>
       </nav>
 
@@ -40,7 +42,43 @@
       </header>
 
       <main class="workspace">
-        <!-- Section 0: Create a Booking -->
+        <!-- Section: Guest Registration -->
+        <section id="registration-section" class="panel" style="display: none;">
+          <div class="panel-header">
+            <div>
+              <h2>New Guest Registration</h2>
+              <p class="panel-desc">Register a new guest profile in PostgreSQL before passport verification or room booking.</p>
+            </div>
+            <span class="badge-neutral">DB Sync</span>
+          </div>
+
+          <div class="panel-body">
+            <form id="registrationForm" class="reg-form-grid">
+              <div class="field-group">
+                <label for="regFirstName">First Name</label>
+                <input type="text" id="regFirstName" placeholder="e.g. Aruzhan" required />
+              </div>
+              <div class="field-group">
+                <label for="regLastName">Last Name</label>
+                <input type="text" id="regLastName" placeholder="e.g. Tanatar" required />
+              </div>
+              <div class="field-group">
+                <label for="regPassport">Passport / ID Number</label>
+                <input type="text" id="regPassport" placeholder="e.g. N12345678" maxlength="12" required />
+              </div>
+              <div class="field-group">
+                <label for="regPhone">Phone Number</label>
+                <input type="tel" id="regPhone" placeholder="+7 700 123 45 67" required />
+              </div>
+              <div class="full-row">
+                <button type="submit" id="regSubmitBtn" class="btn btn-primary">Register Guest</button>
+              </div>
+            </form>
+            <div id="registrationMsg"></div>
+          </div>
+        </section>
+
+        <!-- Section: Create a Booking -->
         <section id="booking-section" class="panel" style="display: none;">
           <div class="panel-header">
             <div>
@@ -69,7 +107,7 @@
                 <button type="submit" class="btn btn-primary">Create Booking</button>
               </div>
             </form>
-            <div id="bookingMsg" class="feedback-banner"></div>
+            <div id="bookingMsg"></div>
           </div>
         </section>
 
@@ -90,7 +128,7 @@
               </div>
               <button id="validateBtn" class="btn btn-primary">Verify Guest</button>
             </div>
-            <div id="validationMsg" class="feedback-banner"></div>
+            <div id="validationMsg"></div>
           </div>
         </section>
 
@@ -147,10 +185,10 @@
                 <input type="text" id="refundReason" placeholder="Flight cancellation / Early checkout" required />
               </div>
               <div class="field-action">
-                <button type="submit" class="btn btn-danger">Issue Refund</button>
+                <button type="submit" id="refundSubmitBtn" class="btn btn-danger">Issue Refund</button>
               </div>
             </form>
-            <div id="refundMsg" class="feedback-banner"></div>
+            <div id="refundMsg"></div>
           </div>
 
           <div class="table-container">
@@ -169,6 +207,59 @@
                 <!-- Populated by app.js -->
               </tbody>
             </table>
+          </div>
+        </section>
+
+        <!-- Section 4: 2GIS Hotel Feedback & Rating -->
+        <section id="reviews-section" class="panel" style="display: none;">
+          <div class="gis-header-card">
+            <div class="gis-hotel-meta">
+              <span class="gis-badge">2GIS Verified • Hotel</span>
+              <h2 class="gis-hotel-title">Grand Almaty Hotel & Spa</h2>
+              <p class="gis-hotel-sub">Almaty, Dostyk Ave 105 • 5-Star Business & Leisure Hotel</p>
+            </div>
+
+            <div class="gis-score-box">
+              <div class="gis-big-rating">
+                <div id="gisAvgScore" class="gis-score-num">4.8</div>
+                <div class="gis-stars-row">★★★★★</div>
+                <div id="gisTotalCount" class="gis-count-label">4 reviews on 2GIS</div>
+              </div>
+              <div id="gisBarsContainer" class="gis-bars">
+                <!-- Rating distribution bars -->
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-body border-bottom">
+            <form id="reviewForm" class="reg-form-grid">
+              <div class="field-group">
+                <label for="reviewAuthor">Guest Name</label>
+                <input type="text" id="reviewAuthor" placeholder="Your full name" required />
+              </div>
+              <div class="field-group">
+                <label>Hotel Rating (1 to 5)</label>
+                <div class="star-picker" id="starPicker">
+                  <button type="button" class="star-btn" data-rating="1">1 ★</button>
+                  <button type="button" class="star-btn" data-rating="2">2 ★</button>
+                  <button type="button" class="star-btn" data-rating="3">3 ★</button>
+                  <button type="button" class="star-btn" data-rating="4">4 ★</button>
+                  <button type="button" class="star-btn selected" data-rating="5">5 ★</button>
+                </div>
+              </div>
+              <div class="field-group full-row">
+                <label for="reviewComment">Feedback about Grand Almaty Hotel</label>
+                <textarea id="reviewComment" placeholder="Share impressions about room cleanliness, staff hospitality, breakfast, or check-in speed..." required></textarea>
+              </div>
+              <div class="full-row">
+                <button type="submit" class="btn btn-primary">Publish 2GIS Review</button>
+              </div>
+            </form>
+            <div id="reviewMsg"></div>
+          </div>
+
+          <div id="reviewsList" class="reviews-list">
+            <!-- Populated by app.js -->
           </div>
         </section>
       </main>
