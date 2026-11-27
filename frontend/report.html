@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payments Report — Grand Almaty PMS</title>
+  <script src="auth.js" defer></script>
+  <script src="report.js" defer></script>
+  <style>
+    body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: #f3f4f6; color: #111827; margin: 0; padding: 32px 16px; }
+    .toolbar { max-width: 720px; margin: 0 auto 16px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+    .toolbar form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
+    .toolbar input { font-size: 13px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+    .toolbar button, .toolbar a { font-size: 13px; padding: 8px 14px; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; color: #111827; cursor: pointer; text-decoration: none; }
+    .report { max-width: 720px; margin: 0 auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 32px; }
+    .report h1 { font-size: 20px; margin: 0 0 4px; }
+    .report .sub { color: #6b7280; font-size: 13px; margin-bottom: 20px; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+    .tile { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
+    .tile .label { font-size: 12px; color: #6b7280; }
+    .tile .value { font-size: 20px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .tile .note { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .tile.net .value { color: #047857; }
+    .tile.refund .value { color: #b91c1c; }
+    h2 { font-size: 14px; margin: 24px 0 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 8px 0; border-bottom: 1px solid #f3f4f6; text-align: left; }
+    th { font-size: 12px; color: #6b7280; font-weight: 600; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .foot { margin-top: 22px; font-size: 12px; color: #6b7280; text-align: center; }
+    #error { max-width: 720px; margin: 0 auto 16px; padding: 14px; background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 8px; display: none; }
+    @media print { body { background: #fff; padding: 0; } .toolbar { display: none; } .report { border: 0; } }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <a href="index.html">← Back to portal</a>
+    <form id="reportForm">
+      <label>From <input type="date" id="reportFrom"></label>
+      <label>To <input type="date" id="reportTo"></label>
+      <button type="submit">Show</button>
+    </form>
+    <button type="button" onclick="window.print()">Print</button>
+  </div>
+  <div id="error"></div>
+  <div id="report" class="report" style="display:none"></div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 package com.hotelbooking.payment.db;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,6 +18,10 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
     Optional<PaymentEntity> findByIdempotencyKey(String idempotencyKey);
 
     Optional<PaymentEntity> findByRefundId(Long refundId);
+
+    /** Строки журнала за полуинтервал [from, to). */
+    List<PaymentEntity> findByPaidAtGreaterThanEqualAndPaidAtLessThanOrderByPaidAtAscPaymentIdAsc(
+            OffsetDateTime from, OffsetDateTime to);
 
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM PaymentEntity p "
             + "WHERE p.bookingId = :bookingId AND p.status = :status")

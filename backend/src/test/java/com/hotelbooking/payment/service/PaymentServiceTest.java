@@ -3,12 +3,17 @@ package com.hotelbooking.payment.service;
 import com.hotelbooking.booking.db.BookingEntity;
 import com.hotelbooking.booking.db.BookingRepository;
 import com.hotelbooking.booking.model.BookingState;
+import com.hotelbooking.guest.db.GuestEntity;
 import com.hotelbooking.payment.db.PaymentEntity;
 import com.hotelbooking.payment.db.PaymentRepository;
 import com.hotelbooking.payment.model.PaymentOutcome;
+import com.hotelbooking.payment.model.PaymentReceiptDto;
+import com.hotelbooking.payment.model.PaymentReportDto;
 import com.hotelbooking.payment.model.PaymentRequest;
 import com.hotelbooking.refund.db.RefundEntity;
+import com.hotelbooking.refund.model.RefundState;
 import com.hotelbooking.room.db.RoomEntity;
+import com.hotelbooking.room.model.RoomType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,11 +25,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 /** Unit tests for PaymentService. Репозитории замоканы, БД не нужна. */
@@ -211,7 +219,160 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
-    private RefundEntity refund(long id, String amount) {
+    // ---------------------------------------------------------------- квитанция
+
+    @Test
+    @DisplayName("Квитанция оплаты: номер RCP-, сумма, способ, транзакция, гость, номер, ночи × цена")
+    void receiptForPayment() {
+        GuestEntity guest = new GuestEntity();
+        guest.setFirstName("Aigerim");
+        guest.setLastName("Sadykova");
+        booking.setGuest(guest);
+        booking.getRoom().setRoomNumber(204);
+        booking.getRoom().setRoomType(RoomType.DOUBLE);
+        PaymentEntity p = stored(12L, new BigDecimal("150.00"), "CARD", null);
+        p.setTransactionRef("PAY-ABC123");
+        when(paymentRepository.findById(12L)).thenReturn(Optional.of(p));
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(paymentRepository.sumByBookingAndStatus(1L, "PAID")).thenReturn(new BigDecimal("150.00"));
+        when(paymentRepository.sumByBookingAndStatus(1L, "REFUNDED")).thenReturn(BigDecimal.ZERO);
+
+        PaymentReceiptDto r = paymentService.receipt(12L);
+
+        assertEquals("RCP-000012", r.receiptNumber());
+        assertEquals("PAY-ABC123", r.transactionRef());
+        assertEquals("CARD", r.method());
+        assertEquals(new BigDecimal("150.00"), r.amount());
+        assertEquals("Aigerim Sadykova", r.guestName());
+        assertEquals(204, r.roomNumber());
+        assertEquals("DOUBLE", r.roomType());
+        assertEquals(3, r.nights());
+        assertEquals(new BigDecimal("150.00"), r.totalDue());
+        assertEquals(0, r.balance().signum());
+    }
+
+    @Test
+    @DisplayName("Квитанция возврата получает номер RFD-")
+    void receiptForRefund() {
+        PaymentEntity p = stored(13L, new BigDecimal("40.00"), null, null);
+        p.setStatus("REFUNDED");
+        p.setRefundId(7L);
+        when(paymentRepository.findById(13L)).thenReturn(Optional.of(p));
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(paymentRepository.sumByBookingAndStatus(1L, "PAID")).thenReturn(new BigDecimal("150.00"));
+        when(paymentRepository.sumByBookingAndStatus(1L, "REFUNDED")).thenReturn(new BigDecimal("40.00"));
+
+        PaymentReceiptDto r = paymentService.receipt(13L);
+
+        assertEquals("RFD-000013", r.receiptNumber());
+        assertEquals("REFUNDED", r.status());
+        assertEquals(new BigDecimal("40.00"), r.balance());
+    }
+
+    @Test
+    @DisplayName("Квитанция для несуществующего платежа — 404")
+    void receiptUnknownPayment() {
+        when(paymentRepository.findById(99L)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> paymentService.receipt(99L));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    // ---------------------------------------------------------------- проверка возврата
+
+    @Test
+    @DisplayName("Завершённый возврат не может быть больше оплаченного (409)")
+    void refundMoreThanPaidIsRejected() {
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(paymentRepository.sumByBookingAndStatus(1L, "PAID")).thenReturn(new BigDecimal("100.00"));
+        when(paymentRepository.sumByBookingAndStatus(1L, "REFUNDED")).thenReturn(new BigDecimal("70.00"));
+        RefundEntity r = refund(null, "40.00");
+        r.setState(RefundState.COMPLETED);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> paymentService.validateRefund(r));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("Корректный завершённый возврат проходит и получает время обработки")
+    void validCompletedRefundGetsProcessedAt() {
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(paymentRepository.sumByBookingAndStatus(1L, "PAID")).thenReturn(new BigDecimal("100.00"));
+        when(paymentRepository.sumByBookingAndStatus(1L, "REFUNDED")).thenReturn(BigDecimal.ZERO);
+        RefundEntity r = refund(null, "40");
+        r.setState(RefundState.COMPLETED);
+
+        assertDoesNotThrow(() -> paymentService.validateRefund(r));
+
+        assertNotNull(r.getProcessedAt());
+        assertEquals(new BigDecimal("40.00"), r.getAmount());
+        assertSame(booking, r.getBooking());
+    }
+
+    @Test
+    @DisplayName("Возврат по несуществующей брони — 404, нулевая сумма — 400")
+    void refundValidationErrors() {
+        when(bookingRepository.findById(1L)).thenReturn(Optional.empty());
+        RefundEntity unknown = refund(null, "10.00");
+        unknown.setState(RefundState.PENDING);
+        assertEquals(HttpStatus.NOT_FOUND,
+                assertThrows(ResponseStatusException.class, () -> paymentService.validateRefund(unknown)).getStatusCode());
+
+        RefundEntity zero = refund(null, "0.00");
+        zero.setState(RefundState.PENDING);
+        assertEquals(HttpStatus.BAD_REQUEST,
+                assertThrows(ResponseStatusException.class, () -> paymentService.validateRefund(zero)).getStatusCode());
+    }
+
+    // ---------------------------------------------------------------- отчёт
+
+    @Test
+    @DisplayName("Отчёт: итоги оплат и возвратов, чистая выручка и разбивка по способам")
+    void reportTotals() {
+        PaymentEntity card = stored(1L, new BigDecimal("150.00"), "CARD", null);
+        PaymentEntity cash = stored(2L, new BigDecimal("50.00"), "CASH", null);
+        cash.setBookingId(2L);
+        PaymentEntity refundRow = stored(3L, new BigDecimal("30.00"), null, null);
+        refundRow.setStatus("REFUNDED");
+        refundRow.setRefundId(7L);
+        when(paymentRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThanOrderByPaidAtAscPaymentIdAsc(any(), any()))
+                .thenReturn(List.of(card, cash, refundRow));
+
+        PaymentReportDto report = paymentService.report(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30));
+
+        assertEquals(2, report.paymentsCount());
+        assertEquals(new BigDecimal("200.00"), report.totalPaid());
+        assertEquals(1, report.refundsCount());
+        assertEquals(new BigDecimal("30.00"), report.totalRefunded());
+        assertEquals(new BigDecimal("170.00"), report.netRevenue());
+        assertEquals(2, report.bookingsCount());
+        assertEquals(3, report.byMethod().size());
+        assertEquals(new PaymentReportDto.MethodTotal("CASH", 1, new BigDecimal("50.00")), report.byMethod().get(0));
+        assertEquals(new PaymentReportDto.MethodTotal("CARD", 1, new BigDecimal("150.00")), report.byMethod().get(1));
+        assertEquals(new PaymentReportDto.MethodTotal("TRANSFER", 0, new BigDecimal("0.00")), report.byMethod().get(2));
+    }
+
+    @Test
+    @DisplayName("Отчёт: период включает весь день «по»; «с» позже «по» — 400")
+    void reportPeriod() {
+        when(paymentRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThanOrderByPaidAtAscPaymentIdAsc(any(), any()))
+                .thenReturn(List.of());
+
+        PaymentReportDto empty = paymentService.report(LocalDate.of(2026, 11, 5), LocalDate.of(2026, 11, 5));
+
+        assertEquals(new BigDecimal("0.00"), empty.netRevenue());
+        verify(paymentRepository).findByPaidAtGreaterThanEqualAndPaidAtLessThanOrderByPaidAtAscPaymentIdAsc(
+                argThat(f -> f.toLocalDate().equals(LocalDate.of(2026, 11, 5))),
+                argThat(t -> t.toLocalDate().equals(LocalDate.of(2026, 11, 6))));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> paymentService.report(LocalDate.of(2026, 11, 10), LocalDate.of(2026, 11, 1)));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    private RefundEntity refund(Long id, String amount) {
         RefundEntity r = new RefundEntity();
         r.setRefundId(id);
         r.setBooking(booking);

@@ -50,6 +50,10 @@ public class RefundService {
     @Transactional
     @CacheEvict(value = "refunds", allEntries = true)
     public RefundDto create(RefundEntity refund) {
+        if (refund != null) {
+            refund.setRefundId(null); // id всегда выдаёт БД, клиент не может перезаписать чужой возврат
+        }
+        paymentService.validateRefund(refund);
         RefundEntity saved = refundRepository.save(refund);
         if (saved.getState() == RefundState.COMPLETED) {
             paymentService.recordRefund(saved);

@@ -2,9 +2,14 @@ package com.hotelbooking.payment.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -26,9 +31,11 @@ import com.hotelbooking.payment.model.PaymentDto;
 import com.hotelbooking.payment.model.PaymentMethod;
 import com.hotelbooking.payment.model.PaymentOutcome;
 import com.hotelbooking.payment.model.PaymentReceiptDto;
+import com.hotelbooking.payment.model.PaymentReportDto;
 import com.hotelbooking.payment.model.PaymentRequest;
 import com.hotelbooking.payment.model.PaymentStatus;
 import com.hotelbooking.refund.db.RefundEntity;
+import com.hotelbooking.refund.model.RefundState;
 import com.hotelbooking.room.db.RoomEntity;
 
 @Service
@@ -176,6 +183,100 @@ public class PaymentService {
     }
 
     // ---------------------------------------------------------------- возвраты
+
+    /**
+     * Проверить возврат до сохранения: бронь существует, сумма > 0, а завершённый возврат
+     * не больше того, что гость фактически заплатил (оплаты минус уже сделанные возвраты).
+     * Подставляет загруженную бронь и время обработки для COMPLETED.
+     */
+    public void validateRefund(RefundEntity refund) {
+        if (refund == null || refund.getBooking() == null || refund.getBooking().getBookingId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Укажите номер брони для возврата");
+        }
+        if (refund.getState() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Укажите статус возврата: PENDING, COMPLETED или FAILED");
+        }
+        BigDecimal amount = refund.getAmount();
+        if (amount == null || amount.signum() <= 0 || amount.compareTo(MAX_AMOUNT) > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Сумма возврата должна быть больше 0");
+        }
+        Long bookingId = refund.getBooking().getBookingId();
+        BookingEntity booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found: " + bookingId));
+        refund.setBooking(booking);
+        refund.setAmount(amount.setScale(2, RoundingMode.HALF_UP));
+
+        if (refund.getState() == RefundState.COMPLETED) {
+            BigDecimal paid = paymentRepository.sumByBookingAndStatus(bookingId, PaymentStatus.PAID.name());
+            BigDecimal refunded = paymentRepository.sumByBookingAndStatus(bookingId, PaymentStatus.REFUNDED.name());
+            BigDecimal refundable = paid.subtract(refunded).setScale(2, RoundingMode.HALF_UP);
+            if (refund.getAmount().compareTo(refundable) > 0) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Сумма возврата " + refund.getAmount() + " больше оплаченной по брони #" + bookingId
+                                + " (доступно к возврату: " + refundable + ")");
+            }
+            if (refund.getProcessedAt() == null) {
+                refund.setProcessedAt(OffsetDateTime.now());
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- отчёт
+
+    /** Отчёт за период: даты включительно; без дат — с начала месяца по сегодня. */
+    public PaymentReportDto report(LocalDate from, LocalDate to) {
+        LocalDate today = LocalDate.now();
+        LocalDate end = to != null ? to : today;
+        LocalDate start = from != null ? from : end.withDayOfMonth(1);
+        if (start.isAfter(end)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Дата «с» позже даты «по»");
+        }
+        ZoneId zone = ZoneId.systemDefault();
+        List<PaymentEntity> rows = paymentRepository
+                .findByPaidAtGreaterThanEqualAndPaidAtLessThanOrderByPaidAtAscPaymentIdAsc(
+                        start.atStartOfDay(zone).toOffsetDateTime(),
+                        end.plusDays(1).atStartOfDay(zone).toOffsetDateTime());
+
+        BigDecimal totalPaid = BigDecimal.ZERO.setScale(2);
+        BigDecimal totalRefunded = BigDecimal.ZERO.setScale(2);
+        int paidCount = 0;
+        int refundCount = 0;
+        Map<String, BigDecimal> byMethodTotal = new LinkedHashMap<>();
+        Map<String, Integer> byMethodCount = new LinkedHashMap<>();
+        for (PaymentMethod m : PaymentMethod.values()) {
+            byMethodTotal.put(m.name(), BigDecimal.ZERO.setScale(2));
+            byMethodCount.put(m.name(), 0);
+        }
+        Set<Long> bookings = new HashSet<>();
+
+        for (PaymentEntity p : rows) {
+            BigDecimal amount = p.getAmount() == null ? BigDecimal.ZERO : p.getAmount();
+            if (PaymentStatus.PAID.name().equals(p.getStatus())) {
+                paidCount++;
+                totalPaid = totalPaid.add(amount);
+                bookings.add(p.getBookingId());
+                if (p.getMethod() != null) {
+                    byMethodTotal.merge(p.getMethod(), amount, BigDecimal::add);
+                    byMethodCount.merge(p.getMethod(), 1, Integer::sum);
+                }
+            } else if (PaymentStatus.REFUNDED.name().equals(p.getStatus())) {
+                refundCount++;
+                totalRefunded = totalRefunded.add(amount);
+                bookings.add(p.getBookingId());
+            }
+        }
+
+        List<PaymentReportDto.MethodTotal> methods = byMethodTotal.entrySet().stream()
+                .map(e -> new PaymentReportDto.MethodTotal(e.getKey(), byMethodCount.get(e.getKey()),
+                        e.getValue().setScale(2, RoundingMode.HALF_UP)))
+                .toList();
+
+        return new PaymentReportDto(start, end, paidCount, totalPaid.setScale(2, RoundingMode.HALF_UP),
+                refundCount, totalRefunded.setScale(2, RoundingMode.HALF_UP),
+                totalPaid.subtract(totalRefunded).setScale(2, RoundingMode.HALF_UP),
+                bookings.size(), methods);
+    }
 
     /**
      * Записать завершённый возврат в платёжный журнал (status = REFUNDED).

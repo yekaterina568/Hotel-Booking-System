@@ -1,6 +1,7 @@
 package com.hotelbooking.refund.service;
 
 import com.hotelbooking.booking.db.BookingEntity;
+import com.hotelbooking.payment.service.PaymentService;
 import com.hotelbooking.refund.db.RefundEntity;
 import com.hotelbooking.refund.db.RefundRepository;
 import com.hotelbooking.refund.model.RefundDto;
@@ -27,12 +28,14 @@ class RefundServiceTest {
 
     @Mock
     private RefundRepository refundRepository;
+    @Mock
+    private PaymentService paymentService;
 
     private RefundService refundService;
 
     @BeforeEach
     void setUp() {
-        refundService = new RefundService(refundRepository);
+        refundService = new RefundService(refundRepository, paymentService);
     }
 
     private RefundEntity refund(long bookingId, String amount, RefundState state) {
@@ -59,6 +62,51 @@ class RefundServiceTest {
         assertEquals("Guest cancelled", result.refundReason());
         assertEquals(RefundState.PENDING, result.state());
         verify(refundRepository).save(r);
+        verify(paymentService).validateRefund(r);
+        verify(paymentService, never()).recordRefund(any());
+    }
+
+    @Test
+    @DisplayName("40. A COMPLETED refund is written to the payments ledger (REFUNDED row)")
+    void create_completedRefund_isRecordedInLedger() {
+        RefundEntity r = refund(5L, "40.00", RefundState.COMPLETED);
+        when(refundRepository.save(any(RefundEntity.class))).thenAnswer(inv -> {
+            RefundEntity e = inv.getArgument(0);
+            e.setRefundId(11L);
+            return e;
+        });
+
+        RefundDto result = refundService.create(r);
+
+        assertEquals(11L, (long) result.refundId());
+        verify(paymentService).validateRefund(r);
+        verify(paymentService).recordRefund(r);
+    }
+
+    @Test
+    @DisplayName("41. An invalid refund (e.g. more than was paid) is rejected and nothing is saved")
+    void create_invalidRefund_isNotSaved() {
+        RefundEntity r = refund(5L, "999.00", RefundState.COMPLETED);
+        doThrow(new ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "too much"))
+                .when(paymentService).validateRefund(r);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> refundService.create(r));
+
+        assertEquals(409, ex.getStatusCode().value());
+        verify(refundRepository, never()).save(any());
+        verify(paymentService, never()).recordRefund(any());
+    }
+
+    @Test
+    @DisplayName("42. A client-supplied refundId is ignored so an existing refund cannot be overwritten")
+    void create_ignoresClientRefundId() {
+        RefundEntity r = refund(5L, "10.00", RefundState.PENDING);
+        r.setRefundId(1L);
+        when(refundRepository.save(any(RefundEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        refundService.create(r);
+
+        assertNull(r.getRefundId());
     }
 
     @Test

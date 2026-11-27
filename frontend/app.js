@@ -410,23 +410,22 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
       refundMsg.className = 'feedback-banner success';
       document.getElementById('refundForm').reset();
       loadRefunds();
+      if (typeof window.loadPaymentsTab === 'function') window.loadPaymentsTab(); // возврат попал в журнал платежей
       return;
     }
+    // Сервер отказал (например, возврат больше оплаченного) — показываем причину, ничего не «проводим» локально
+    let detail = `Server error (HTTP ${response.status})`;
+    try {
+      const body = await response.json();
+      detail = body.message || body.detail || body.error || detail;
+    } catch (_) { /* не JSON */ }
+    refundMsg.textContent = `❌ ${detail}`;
+    refundMsg.className = 'feedback-banner error';
   } catch (err) {
-    console.warn('API call fallback:', err);
+    console.warn('Refund API call failed:', err);
+    refundMsg.textContent = '❌ Нет связи с сервером — возврат не сохранён.';
+    refundMsg.className = 'feedback-banner error';
   }
-
-  localRefunds.push({
-    refund_id: localRefunds.length + 1,
-    booking_id: bookingId,
-    amount: amount.toFixed(2),
-    refund_reason: reason,
-    status: 'COMPLETED'
-  });
-  refundMsg.textContent = `✓ Refund of $${amount.toFixed(2)} for Booking #${bookingId} processed!`;
-  refundMsg.className = 'feedback-banner success';
-  document.getElementById('refundForm').reset();
-  loadRefunds();
 });
 
 // 6. Отмена / удаление возврата (DELETE /api/refunds/{id} -> удаление из БД)
