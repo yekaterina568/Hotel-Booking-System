@@ -69,50 +69,116 @@ window.hotelAuth = {
   authenticate
 };
 
-const frontDeskSignInForm = document.getElementById('frontDeskSignInForm');
-if (frontDeskSignInForm) {
-  const loginPanel = document.getElementById('loginPanel');
-  const frontDesk = document.querySelector('.app-layout');
-  const feedback = document.getElementById('frontDeskSignInFeedback');
+// Профили операторов (имя и должность) — дизайн экрана входа от Аружан.
+// Пароль здесь НЕ хранится: вход всегда проверяется бэкендом через HTTP Basic.
+const operatorProfilesKey = 'pms_operator_profiles';
+
+function getOperatorProfiles() {
+  try {
+    return JSON.parse(localStorage.getItem(operatorProfilesKey)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveOperatorProfile(profile) {
+  const profiles = getOperatorProfiles();
+  profiles[profile.username.toLowerCase()] = profile;
+  try {
+    localStorage.setItem(operatorProfilesKey, JSON.stringify(profiles));
+  } catch {
+    // localStorage может быть недоступен — профиль просто не запомнится
+  }
+}
+
+const authScreen = document.getElementById('authScreen');
+if (authScreen) {
+  const appLayout = document.getElementById('appLayout');
+  const authMsg = document.getElementById('authMsg');
+  const loginForm = document.getElementById('operatorLoginForm');
+  const registerForm = document.getElementById('operatorRegisterForm');
+  const loginTab = document.getElementById('tabLoginBtn');
+  const registerTab = document.getElementById('tabRegisterBtn');
+
+  function setAuthMessage(text, kind = 'error') {
+    authMsg.textContent = text;
+    authMsg.className = text ? `msg ${kind}` : '';
+  }
+
+  function showOperator(username) {
+    const profile = getOperatorProfiles()[username.toLowerCase()];
+    document.getElementById('currentOperatorName').textContent = profile?.fullName || username;
+    document.getElementById('currentOperatorRole').textContent = profile?.role || 'Front-Desk Operator';
+  }
 
   function showFrontDeskLogin(message = '') {
-    loginPanel.hidden = false;
-    frontDesk.hidden = true;
-    feedback.textContent = message;
-    feedback.className = message ? 'feedback-banner error' : 'feedback-banner';
+    authScreen.hidden = false;
+    appLayout.hidden = true;
+    setAuthMessage(message);
   }
 
   function showFrontDeskApp() {
-    loginPanel.hidden = true;
-    frontDesk.hidden = false;
+    authScreen.hidden = true;
+    appLayout.hidden = false;
+    const credentials = getCredentials();
+    if (credentials) showOperator(credentials.username);
   }
 
-  frontDeskSignInForm.addEventListener('submit', async event => {
-    event.preventDefault();
-    const username = document.getElementById('frontDeskUsername').value;
-    const password = document.getElementById('frontDeskPassword').value;
-    const submit = frontDeskSignInForm.querySelector('button[type="submit"]');
+  function showAuthTab(register) {
+    loginTab.classList.toggle('active', !register);
+    registerTab.classList.toggle('active', register);
+    loginForm.style.display = register ? 'none' : 'flex';
+    registerForm.style.display = register ? 'flex' : 'none';
+    setAuthMessage('');
+  }
+
+  async function signIn(form, username, password, profile) {
+    const submit = form.querySelector('button[type="submit"]');
+    const label = submit.textContent;
     submit.disabled = true;
     submit.textContent = 'Signing in…';
-    feedback.textContent = '';
-    feedback.className = 'feedback-banner';
+    setAuthMessage('');
 
     try {
-      await authenticate(username, password);
-      frontDeskSignInForm.reset();
+      const credentials = await authenticate(username, password);
+      if (profile) saveOperatorProfile({ ...profile, username: credentials.username });
+      form.reset();
       showFrontDeskApp();
       window.dispatchEvent(new Event('hotel-authenticated'));
     } catch (error) {
-      showFrontDeskLogin(error.message || 'Could not sign in.');
+      setAuthMessage(error.message || 'Could not sign in.');
     } finally {
       submit.disabled = false;
-      submit.textContent = 'Sign in';
+      submit.textContent = label;
     }
+  }
+
+  loginTab.addEventListener('click', () => showAuthTab(false));
+  registerTab.addEventListener('click', () => showAuthTab(true));
+
+  loginForm.addEventListener('submit', event => {
+    event.preventDefault();
+    signIn(loginForm,
+      document.getElementById('loginUsername').value,
+      document.getElementById('loginPassword').value);
   });
 
-  document.getElementById('frontDeskSignOut').addEventListener('click', () => {
+  registerForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const fullName = document.getElementById('regOpFullName').value.trim();
+    if (!fullName) {
+      setAuthMessage('Enter your full name.');
+      return;
+    }
+    signIn(registerForm,
+      document.getElementById('regOpUsername').value,
+      document.getElementById('regOpPassword').value,
+      { fullName, role: document.getElementById('regOpRole').value });
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
     clearCredentials();
-    window.dispatchEvent(new Event('hotel-auth-required'));
+    showFrontDeskLogin();
   });
 
   window.addEventListener('hotel-auth-required', () => showFrontDeskLogin('Sign in again to continue.'));

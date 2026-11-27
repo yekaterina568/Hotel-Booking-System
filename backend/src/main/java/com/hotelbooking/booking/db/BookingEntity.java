@@ -55,4 +55,8 @@ public class BookingEntity {
 
     @Column(name = "checked_out_at")
     OffsetDateTime checkedOutAt;
+
+    /** When the booking was cancelled; the refund percentage depends on it. */
+    @Column(name = "cancelled_at")
+    OffsetDateTime cancelledAt;
 }

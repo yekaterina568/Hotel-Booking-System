@@ -1,0 +1,301 @@
+From 298add7ead3b23e10e4dbb9283fbc89fabe59fd9 Mon Sep 17 00:00:00 2001
+From: Islam Meldebek <islam@example.invalid>
+Date: Fri, 27 Nov 2026 13:41:18 +0500
+Subject: [PATCH] Fix guest registration
+
+- Front desk sent the request without credentials (always 401, shown as
+  'Check passport uniqueness') and sent 'phone' instead of 'phoneNum'
+- GuestService.create normalises input (passport upper case, phone without
+  spaces/brackets/dashes) and validates it; duplicate passport -> 409 with
+  the existing guest id instead of a 500; DB unique violation -> 409
+- Passport rule 6-20 [A-Z0-9] everywhere, same as the DB check
+- Tests 95-98
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01AAiCEzYzpRGaDbvUYvoXDH
+---
+ .../config/DatabaseConflictErrors.java        | 12 ++-
+ .../guest/db/GuestRepository.java             |  6 ++
+ .../guest/service/GuestService.java           | 45 ++++++++++
+ .../guest/service/GuestRegistrationTest.java  | 90 +++++++++++++++++++
+ frontend/app.js                               | 12 +--
+ frontend/index.html                           |  2 +-
+ 6 files changed, 157 insertions(+), 10 deletions(-)
+ create mode 100644 backend/src/test/java/com/hotelbooking/guest/service/GuestRegistrationTest.java
+
+diff --git a/backend/src/main/java/com/hotelbooking/config/DatabaseConflictErrors.java b/backend/src/main/java/com/hotelbooking/config/DatabaseConflictErrors.java
+index 0442d11..be3e6ec 100644
+--- a/backend/src/main/java/com/hotelbooking/config/DatabaseConflictErrors.java
++++ b/backend/src/main/java/com/hotelbooking/config/DatabaseConflictErrors.java
+@@ -19,14 +19,20 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
+ public class DatabaseConflictErrors {
+ 
+     static final String NO_OVERLAP_CONSTRAINT = "excl_bookings_room_no_overlap";
++    static final String UNIQUE_PASSPORT_CONSTRAINT = "guests_passport_num_key";
+ 
+     @ExceptionHandler(DataIntegrityViolationException.class)
+     public ResponseEntity<ProblemDetail> handle(DataIntegrityViolationException exception) {
+         Throwable cause = NestedExceptionUtils.getMostSpecificCause(exception);
+         String text = cause.getMessage() == null ? "" : cause.getMessage();
+-        String detail = text.contains(NO_OVERLAP_CONSTRAINT)
+-                ? "Номер уже занят на эти даты"
+-                : "Операция нарушает ограничения базы данных";
++        String detail;
++        if (text.contains(NO_OVERLAP_CONSTRAINT)) {
++            detail = "Номер уже занят на эти даты";
++        } else if (text.contains(UNIQUE_PASSPORT_CONSTRAINT)) {
++            detail = "Гость с таким паспортом уже зарегистрирован";
++        } else {
++            detail = "Операция нарушает ограничения базы данных";
++        }
+         log.warn("Database constraint violation: {}", text);
+         return ResponseEntity.status(HttpStatus.CONFLICT)
+                 .body(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, detail));
+diff --git a/backend/src/main/java/com/hotelbooking/guest/db/GuestRepository.java b/backend/src/main/java/com/hotelbooking/guest/db/GuestRepository.java
+index a574e71..46efb89 100644
+--- a/backend/src/main/java/com/hotelbooking/guest/db/GuestRepository.java
++++ b/backend/src/main/java/com/hotelbooking/guest/db/GuestRepository.java
+@@ -1,5 +1,11 @@
+ package com.hotelbooking.guest.db;
+ 
+ import org.springframework.data.jpa.repository.JpaRepository;
++
++import java.util.Optional;
++
+ public interface GuestRepository extends JpaRepository<GuestEntity, Long> {
++
++    /** Passport numbers are stored in upper case, so an exact match is enough. */
++    Optional<GuestEntity> findByPassportNum(String passportNum);
+ }
+diff --git a/backend/src/main/java/com/hotelbooking/guest/service/GuestService.java b/backend/src/main/java/com/hotelbooking/guest/service/GuestService.java
+index c9b5bca..1790184 100644
+--- a/backend/src/main/java/com/hotelbooking/guest/service/GuestService.java
++++ b/backend/src/main/java/com/hotelbooking/guest/service/GuestService.java
+@@ -8,9 +8,11 @@ import org.springframework.cache.annotation.CacheEvict;
+ import org.springframework.cache.annotation.Cacheable;
+ import org.springframework.http.HttpStatus;
+ import org.springframework.stereotype.Service;
++import org.springframework.transaction.annotation.Transactional;
+ import org.springframework.web.server.ResponseStatusException;
+ import java.time.OffsetDateTime;
+ import java.util.List;
++import java.util.regex.Pattern;
+ 
+ @Service
+ @Slf4j
+@@ -38,8 +40,47 @@ public class GuestService {
+                         HttpStatus.NOT_FOUND, "Guest not found: " + id));
+     }
+ 
++    /** Same rule as the database CHECK constraint chk_passport_format. */
++    private static final Pattern PASSPORT = Pattern.compile("^[A-Z0-9]{6,20}$");
++    /** Digits with an optional leading +; the column is VARCHAR(15). */
++    private static final Pattern PHONE = Pattern.compile("^\\+?[0-9]{7,14}$");
++
++    /**
++     * Registers a guest. Input is normalised (trimmed names, upper-case passport, phone without spaces,
++     * dashes or brackets) and checked before the insert, so the user gets a clear 400/409 instead of a 500.
++     */
++    @Transactional
+     @CacheEvict(value = "guests", allEntries = true)
+     public GuestDto create(GuestEntity guest) {
++        String firstName = trim(guest.getFirstName());
++        String lastName = trim(guest.getLastName());
++        String passport = guest.getPassportNum() == null ? "" : guest.getPassportNum().replaceAll("\\s", "").toUpperCase();
++        String phone = guest.getPhoneNum() == null ? "" : guest.getPhoneNum().replaceAll("[\\s()\\-]", "");
++
++        if (firstName.isEmpty() || lastName.isEmpty()) {
++            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Укажите имя и фамилию");
++        }
++        if (firstName.length() > 30 || lastName.length() > 30) {
++            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Имя и фамилия — не длиннее 30 символов");
++        }
++        if (!PASSPORT.matcher(passport).matches()) {
++            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
++                    "Номер паспорта: от 6 до 20 латинских букв и цифр, без пробелов и знаков");
++        }
++        if (!PHONE.matcher(phone).matches()) {
++            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
++                    "Телефон: от 7 до 14 цифр, можно с + в начале (например +77001234567)");
++        }
++        guestRepository.findByPassportNum(passport).ifPresent(existing -> {
++            throw new ResponseStatusException(HttpStatus.CONFLICT,
++                    "Гость с паспортом " + passport + " уже зарегистрирован (ID " + existing.getGuestId() + ")");
++        });
++
++        guest.setGuestId(null);
++        guest.setFirstName(firstName);
++        guest.setLastName(lastName);
++        guest.setPassportNum(passport);
++        guest.setPhoneNum(phone);
+         if (guest.getCreatedAt() == null) {
+             guest.setCreatedAt(OffsetDateTime.now());
+         }
+@@ -48,6 +89,10 @@ public class GuestService {
+         return created;
+     }
+ 
++    private static String trim(String value) {
++        return value == null ? "" : value.trim();
++    }
++
+     @CacheEvict(value = "guests", allEntries = true)
+     public void delete(Long id) {
+         if (!guestRepository.existsById(id)) {
+diff --git a/backend/src/test/java/com/hotelbooking/guest/service/GuestRegistrationTest.java b/backend/src/test/java/com/hotelbooking/guest/service/GuestRegistrationTest.java
+new file mode 100644
+index 0000000..6e7d84a
+--- /dev/null
++++ b/backend/src/test/java/com/hotelbooking/guest/service/GuestRegistrationTest.java
+@@ -0,0 +1,90 @@
++package com.hotelbooking.guest.service;
++
++import com.hotelbooking.guest.db.GuestEntity;
++import com.hotelbooking.guest.db.GuestRepository;
++import com.hotelbooking.guest.model.GuestDto;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.api.extension.ExtendWith;
++import org.mockito.Mock;
++import org.mockito.junit.jupiter.MockitoExtension;
++import org.springframework.web.server.ResponseStatusException;
++
++import java.util.Optional;
++
++import static org.junit.jupiter.api.Assertions.*;
++import static org.mockito.ArgumentMatchers.any;
++import static org.mockito.Mockito.*;
++
++/** Guest registration: normalisation, validation and the unique passport check. */
++@ExtendWith(MockitoExtension.class)
++class GuestRegistrationTest {
++
++    @Mock
++    private GuestRepository guestRepository;
++
++    private GuestService guestService;
++
++    @BeforeEach
++    void setUp() {
++        guestService = new GuestService(guestRepository);
++    }
++
++    private GuestEntity request(String passport, String phone) {
++        GuestEntity g = new GuestEntity();
++        g.setFirstName("  Aruzhan ");
++        g.setLastName("Tanatar");
++        g.setPassportNum(passport);
++        g.setPhoneNum(phone);
++        return g;
++    }
++
++    @Test
++    @DisplayName("95. Registration normalises input: passport upper case, phone without spaces")
++    void create_normalisesAndSaves() {
++        when(guestRepository.findByPassportNum("N1234567")).thenReturn(Optional.empty());
++        when(guestRepository.save(any(GuestEntity.class))).thenAnswer(inv -> inv.getArgument(0));
++
++        GuestDto result = guestService.create(request(" n1234567 ", "+7 (700) 123-45-67"));
++
++        assertEquals("N1234567", result.passportNum());
++        assertEquals("Aruzhan", result.firstName());
++        verify(guestRepository).save(argThat(g -> "+77001234567".equals(g.getPhoneNum()) && g.getCreatedAt() != null));
++    }
++
++    @Test
++    @DisplayName("96. A passport that is already registered gives 409 and nothing is saved")
++    void create_duplicatePassport_returns409() {
++        GuestEntity existing = new GuestEntity();
++        existing.setGuestId(3L);
++        when(guestRepository.findByPassportNum("N1234567")).thenReturn(Optional.of(existing));
++
++        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
++                () -> guestService.create(request("n1234567", "+77001234567")));
++
++        assertEquals(409, ex.getStatusCode().value());
++        assertTrue(ex.getReason().contains("ID 3"));
++        verify(guestRepository, never()).save(any());
++    }
++
++    @Test
++    @DisplayName("97. Passport with wrong characters or length gives 400 and doesn't touch the database")
++    void create_badPassport_returns400() {
++        assertEquals(400, assertThrows(ResponseStatusException.class,
++                () -> guestService.create(request("AB-12", "+77001234567"))).getStatusCode().value());
++        assertEquals(400, assertThrows(ResponseStatusException.class,
++                () -> guestService.create(request("ПАСПОРТ123", "+77001234567"))).getStatusCode().value());
++        verifyNoInteractions(guestRepository);
++    }
++
++    @Test
++    @DisplayName("98. Missing or too long phone gives 400 (the column holds 15 characters)")
++    void create_badPhone_returns400() {
++        assertEquals(400, assertThrows(ResponseStatusException.class,
++                () -> guestService.create(request("N1234567", null))).getStatusCode().value());
++        assertEquals(400, assertThrows(ResponseStatusException.class,
++                () -> guestService.create(request("N1234567", "+7700123456789012"))).getStatusCode().value());
++        verifyNoInteractions(guestRepository);
++    }
++}
+diff --git a/frontend/app.js b/frontend/app.js
+index dd12f06..0a83c76 100644
+--- a/frontend/app.js
++++ b/frontend/app.js
+@@ -130,14 +130,15 @@ if (registrationForm) {
+     btn.textContent = 'Registering...';
+ 
+     try {
+-      const response = await fetch(`${API_BASE_URL}/guests`, {
++      // hotelAuth.fetch adds the login (all API routes need it); the server field is phoneNum, not phone
++      const response = await hotelAuth.fetch(`${API_BASE_URL}/guests`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           firstName,
+           lastName,
+           passportNum,
+-          phone
++          phoneNum: phone
+         })
+       });
+ 
+@@ -148,8 +149,7 @@ if (registrationForm) {
+         registrationForm.reset();
+         loadPriorityQueue();
+       } else {
+-        const errText = await response.text();
+-        regMsg.textContent = `❌ Registration failed (${response.status}): ${errText || 'Check passport uniqueness'}`;
++        regMsg.textContent = `❌ Registration failed (${response.status}): ${await readError(response, 'Check the entered data.')}`;
+         regMsg.className = 'msg error';
+       }
+     } catch (err) {
+@@ -394,10 +394,10 @@ async function autoAssign(bookingId, roomNumber) {
+ document.getElementById('validateBtn').addEventListener('click', async () => {
+   const passportVal = document.getElementById('passportInput').value.trim().toUpperCase();
+   const msg = document.getElementById('validationMsg');
+-  const passportRegex = /^[A-Z0-9]{7,12}$/;
++  const passportRegex = /^[A-Z0-9]{6,20}$/; // same rule as the server and the database
+ 
+   if (!passportRegex.test(passportVal)) {
+-    msg.textContent = '❌ Error: Invalid passport format. Expected 7 to 12 alphanumeric characters.';
++    msg.textContent = '❌ Error: Invalid passport format. Expected 6 to 20 Latin letters and digits.';
+     msg.className = 'feedback-banner error';
+     return;
+   }
+diff --git a/frontend/index.html b/frontend/index.html
+index e7be16f..f0ae402 100644
+--- a/frontend/index.html
++++ b/frontend/index.html
+@@ -86,7 +86,7 @@
+               </div>
+               <div class="field-group">
+                 <label for="regPassport">Passport / ID Number</label>
+-                <input type="text" id="regPassport" placeholder="e.g. N12345678" maxlength="12" required />
++                <input type="text" id="regPassport" placeholder="e.g. N12345678" maxlength="20" required />
+               </div>
+               <div class="field-group">
+                 <label for="regPhone">Phone Number</label>
+-- 
+2.43.0
+

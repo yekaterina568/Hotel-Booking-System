@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -23,6 +25,11 @@ public class BookingService {
 
     /** States in which a booking occupies its room. */
     public static final Set<BookingState> ACTIVE_STATES = Set.of(BookingState.CONFIRMED, BookingState.CHECKEDIN);
+
+    /** A stay (also after an extension) can't be longer than this. */
+    public static final long MAX_STAY_NIGHTS = 30;
+
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     private final BookingRepository bookingRepository;
 
@@ -68,6 +75,15 @@ public class BookingService {
                     "Дата выезда должна быть позже даты заезда");
         }
 
+        Long nights = BookingDto.countNights(arrival, departure);
+        if (nights > MAX_STAY_NIGHTS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Максимальный срок проживания — " + MAX_STAY_NIGHTS + " ночей");
+        }
+
+        // Double booking protection: lock the room first, so a parallel request for the same room
+        // waits here and then sees this booking in its overlap check.
+        lockRoomOrThrow(booking.getRoom().getRoomId());
         List<BookingEntity> overlapping = bookingRepository.findOverlapping(
                 booking.getRoom().getRoomId(), ACTIVE_STATES, arrival, departure);
         if (!overlapping.isEmpty()) {
@@ -127,8 +143,73 @@ public class BookingService {
                     "Отменить можно только подтверждённую бронь");
         }
         booking.setState(BookingState.CANCELLED);
+        booking.setCancelledAt(OffsetDateTime.now());
         BookingDto cancelled = BookingDto.fromEntity(bookingRepository.save(booking));
         log.info("Cancelled booking id={}", id);
         return cancelled;
+    }
+
+    /**
+     * Extends a stay: moves the departure date later. Works for confirmed and checked-in bookings.
+     * The extra nights must be free: the room is locked and the period [old departure, new departure)
+     * is checked against the other active bookings of the room. The new total price is in the returned DTO.
+     */
+    @Transactional
+    @CacheEvict(value = "bookings", allEntries = true)
+    public BookingDto extend(Long id, OffsetDateTime newDeparture) {
+        if (newDeparture == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Укажите новую дату выезда");
+        }
+        BookingEntity booking = findEntityById(id);
+        if (!ACTIVE_STATES.contains(booking.getState())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Продлить можно только подтверждённую бронь или бронь заселённого гостя");
+        }
+        if (booking.getRoom() == null || booking.getRoom().getRoomId() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "У брони нет номера");
+        }
+
+        OffsetDateTime arrival = booking.getExpectedArrival();
+        OffsetDateTime currentDeparture = booking.getExpectedDeparture() != null
+                ? booking.getExpectedDeparture()
+                : arrival.plusDays(1);
+        if (!newDeparture.isAfter(currentDeparture)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Новая дата выезда должна быть позже текущей (" + currentDeparture.format(DATE_TIME) + ")");
+        }
+        if (!newDeparture.isAfter(OffsetDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Новая дата выезда уже в прошлом");
+        }
+        if (BookingDto.countNights(arrival, newDeparture) > MAX_STAY_NIGHTS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Максимальный срок проживания — " + MAX_STAY_NIGHTS + " ночей");
+        }
+
+        Long roomId = booking.getRoom().getRoomId();
+        lockRoomOrThrow(roomId);
+        // Our own booking ends at currentDeparture, so with half-open periods it never overlaps the extension.
+        BookingEntity firstConflict = bookingRepository
+                .findOverlapping(roomId, ACTIVE_STATES, currentDeparture, newDeparture).stream()
+                .filter(other -> !id.equals(other.getBookingId()))
+                .min(Comparator.comparing(BookingEntity::getExpectedArrival))
+                .orElse(null);
+        if (firstConflict != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Нельзя продлить: номер занят с " + firstConflict.getExpectedArrival().format(DATE_TIME)
+                            + " (бронь #" + firstConflict.getBookingId() + "). Продлить можно максимум до "
+                            + firstConflict.getExpectedArrival().format(DATE_TIME));
+        }
+
+        Long oldNights = BookingDto.countNights(arrival, currentDeparture);
+        booking.setExpectedDeparture(newDeparture);
+        BookingDto extended = BookingDto.fromEntity(bookingRepository.save(booking));
+        log.info("Extended booking id={} from {} to {} nights", id, oldNights, extended.nights());
+        return extended;
+    }
+
+    private void lockRoomOrThrow(Long roomId) {
+        if (bookingRepository.lockRoom(roomId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Номер не найден: " + roomId);
+        }
     }
 }

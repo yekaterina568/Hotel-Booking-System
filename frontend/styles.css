@@ -31,9 +31,49 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-page[hidden] {
+  display: none;
+}
+
+.auth-panel {
+  width: min(100%, 420px);
+  padding: 26px;
+}
+
+.auth-panel form {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.auth-panel h1 {
+  font-size: 24px;
+}
+
+.auth-panel .panel-desc {
+  margin-top: 6px;
+  color: var(--text-secondary);
+}
+
+.auth-panel .feedback-banner:not(:empty) {
+  margin-top: 0;
+}
+
+/* Layout */
 .app-layout {
   display: flex;
   min-height: 100vh;
+}
+
+.app-layout[hidden] {
+  display: none;
 }
 
 /* Sidebar */
@@ -76,6 +116,7 @@ body {
 .brand-name {
   font-weight: 600;
   font-size: 14px;
+  letter-spacing: -0.01em;
 }
 
 .brand-sub {
@@ -101,7 +142,11 @@ body {
   transition: background 0.15s, color 0.15s;
 }
 
-.nav-item:hover,
+.nav-item:hover {
+  background: #1f2937;
+  color: #f9fafb;
+}
+
 .nav-item.active {
   background: #1f2937;
   color: #ffffff;
@@ -116,6 +161,18 @@ body {
 .operator-role {
   color: #9ca3af;
   font-size: 11px;
+}
+
+.operator-name {
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.operator-id {
+  color: #6b7280;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  margin-top: 2px;
 }
 
 /* Main Content */
@@ -182,6 +239,7 @@ body {
 .panel-header h2 {
   font-size: 15px;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .panel-desc {
@@ -208,20 +266,9 @@ body {
 
 .grid-form {
   display: grid;
-  grid-template-columns: 140px 160px 1fr auto;
+  grid-template-columns: 140px 140px 1fr auto;
   gap: 12px;
   align-items: flex-end;
-}
-
-.reg-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  max-width: 680px;
-}
-
-.reg-form-grid .full-row {
-  grid-column: 1 / -1;
 }
 
 .field-group {
@@ -242,27 +289,17 @@ select {
   height: 36px;
   padding: 0 12px;
   width: 100%;
+  box-sizing: border-box;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 13px;
   color: var(--text-primary);
   background: #ffffff;
-}
-
-textarea {
-  padding: 10px 12px;
-  width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-family: inherit;
-  font-size: 13px;
-  min-height: 80px;
-  resize: vertical;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 input:focus,
-select:focus,
-textarea:focus {
+select:focus {
   outline: none;
   border-color: #111827;
   box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.08);
@@ -277,6 +314,7 @@ textarea:focus {
   font-weight: 500;
   cursor: pointer;
   border: 1px solid transparent;
+  transition: background 0.15s;
   white-space: nowrap;
 }
 
@@ -287,6 +325,16 @@ textarea:focus {
 
 .btn-primary:hover {
   background-color: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background: #f3f4f6;
 }
 
 .btn-danger {
@@ -311,22 +359,29 @@ textarea:focus {
   cursor: pointer;
 }
 
-/* Messages */
-.msg {
+.btn-assign:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+/* Feedback Messages */
+.feedback-banner {
   margin-top: 12px;
   font-size: 13px;
   font-weight: 500;
-  padding: 10px 14px;
-  border-radius: 6px;
 }
 
-.msg.success {
+.feedback-banner.success {
+  padding: 10px 14px;
+  border-radius: 6px;
   background: var(--success-bg);
   color: var(--success-text);
   border: 1px solid var(--success-border);
 }
 
-.msg.error {
+.feedback-banner.error {
+  padding: 10px 14px;
+  border-radius: 6px;
   background: var(--danger-bg);
   color: var(--danger-text);
   border: 1px solid var(--danger-border);
@@ -349,6 +404,7 @@ th {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color);
 }
@@ -357,12 +413,22 @@ td {
   padding: 13px 24px;
   font-size: 13px;
   border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background-color: #f9fafb;
 }
 
 .text-right {
   text-align: right;
 }
 
+/* Status Badges */
 .badge-neutral {
   font-size: 11px;
   font-weight: 500;
@@ -387,6 +453,96 @@ td {
   color: var(--success-text);
   border: 1px solid var(--success-border);
 }
+/* Reservation form with dates */
+.booking-form {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.booking-form .span-2 {
+  grid-column: span 2;
+}
+
+.booking-summary {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.badge-overdue {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid var(--danger-border);
+  margin-left: 6px;
+}
+
+.badge-today {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  margin-left: 6px;
+}
+
+#checkout-section .panel-body:has(> .feedback-banner:empty) {
+  display: none;
+}
+
+#checkoutTable .btn-assign {
+  white-space: nowrap;
+}
+
+
+/* ===== Стили, добавленные 27.11 (2GIS-отзывы, форма регистрации, сообщения) ===== */
+
+/* Исправленные сообщения .msg (для app.js) */
+.msg {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: 6px;
+}
+
+.msg.success {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+}
+
+.msg.error {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid var(--danger-border);
+}
+
+/* Registration Form Grid */
+.reg-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 680px;
+}
+
+.reg-form-grid .full-row {
+  grid-column: 1 / -1;
+}
+
+textarea {
+  padding: 10px 12px;
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 80px;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #111827;
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.08);
+}
 
 /* 2GIS Style Hotel Card & Reviews */
 .gis-header-card {
@@ -409,6 +565,7 @@ td {
 .gis-badge {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   width: fit-content;
   background: #1db954;
   color: #ffffff;
@@ -416,11 +573,13 @@ td {
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 4px;
+  letter-spacing: 0.03em;
 }
 
 .gis-hotel-title {
   font-size: 20px;
   font-weight: 700;
+  color: var(--text-primary);
 }
 
 .gis-hotel-sub {
@@ -436,6 +595,7 @@ td {
   padding: 14px 20px;
   border-radius: 10px;
   border: 1px solid #d1fae5;
+  box-shadow: 0 2px 6px rgba(29, 185, 84, 0.06);
 }
 
 .gis-big-rating {
@@ -446,12 +606,14 @@ td {
   font-size: 34px;
   font-weight: 800;
   line-height: 1;
+  color: #111827;
 }
 
 .gis-stars-row {
   color: #f59e0b;
   font-size: 15px;
   margin-top: 4px;
+  letter-spacing: 1px;
 }
 
 .gis-count-label {
@@ -489,6 +651,7 @@ td {
   border-radius: 99px;
 }
 
+/* Interactive Star Picker */
 .star-picker {
   display: flex;
   gap: 6px;
@@ -502,6 +665,7 @@ td {
   font-size: 14px;
   cursor: pointer;
   color: #9ca3af;
+  transition: all 0.15s;
 }
 
 .star-btn.selected {
@@ -511,6 +675,7 @@ td {
   font-weight: 600;
 }
 
+/* Review Feed Cards */
 .reviews-list {
   display: flex;
   flex-direction: column;
@@ -522,6 +687,10 @@ td {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.review-item:last-child {
+  border-bottom: none;
 }
 
 .review-top {
@@ -568,6 +737,7 @@ td {
 .review-text {
   font-size: 13px;
   color: #374151;
+  line-height: 1.55;
 }
 
 /* Operator Auth Gate (Login & Registration) */
@@ -671,4 +841,12 @@ td {
 
 .btn-logout:hover {
   background: #374151;
+}
+
+.auth-screen[hidden] {
+  display: none;
+}
+
+#authMsg:not(:empty) {
+  margin-top: 14px;
 }

@@ -28,6 +28,7 @@ import static org.mockito.Mockito.lenient;
  * Tests that found bugs in the application code. See docs/week13-test-report.md.
  * They are switched off with @Disabled so the build stays green until the developers fix the bugs.
  * After the fix: delete the @Disabled line and the test must pass.
+ * BUG-2 is fixed (RefundService.create rejects amounts <= 0), so test 68 runs again.
  */
 @ExtendWith(MockitoExtension.class)
 class FoundBugsTest {
@@ -58,7 +59,6 @@ class FoundBugsTest {
     }
 
     @Test
-    @Disabled("BUG-2: a refund with a negative amount is saved. Waiting for a fix in RefundService.create")
     @DisplayName("68. BUG-2: a refund with a negative amount must be rejected (expected 400)")
     void create_negativeRefund_shouldBeRejected() {
         BookingEntity booking = new BookingEntity();

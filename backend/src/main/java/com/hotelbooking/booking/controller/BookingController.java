@@ -2,6 +2,7 @@ package com.hotelbooking.booking.controller;
 
 import com.hotelbooking.booking.db.BookingEntity;
 import com.hotelbooking.booking.model.BookingDto;
+import com.hotelbooking.booking.model.ExtendBookingRequest;
 import com.hotelbooking.booking.service.BookingService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -47,5 +48,11 @@ public class BookingController {
     @PostMapping("/{id}/cancel")
     public BookingDto cancel(@PathVariable Long id) {
         return bookingService.cancel(id);
+    }
+
+    /** Extends the stay: {"newDeparture": "2026-12-05T12:00:00+05:00"}. */
+    @PostMapping("/{id}/extend")
+    public BookingDto extend(@PathVariable Long id, @RequestBody ExtendBookingRequest request) {
+        return bookingService.extend(id, request == null ? null : request.newDeparture());
     }
 }

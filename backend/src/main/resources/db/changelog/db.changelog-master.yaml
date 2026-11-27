@@ -14,3 +14,6 @@ databaseChangeLog:
   - include:
       file: changes/005-add-stay-dates-and-checkout.sql
       relativeToChangelogFile: true
+  - include:
+      file: changes/006-prevent-double-booking-and-refund-rules.sql
+      relativeToChangelogFile: true
