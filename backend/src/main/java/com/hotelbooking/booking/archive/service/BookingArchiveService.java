@@ -6,6 +6,7 @@ import com.hotelbooking.booking.archive.model.BookingArchiveDto;
 import com.hotelbooking.booking.db.BookingEntity;
 import com.hotelbooking.booking.db.BookingRepository;
 import com.hotelbooking.booking.model.BookingState;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
+@Slf4j
 public class BookingArchiveService {
 
     private final BookingRepository bookingRepository;
@@ -62,11 +64,15 @@ public class BookingArchiveService {
         archived.setGuest(booking.getGuest());
         archived.setRoom(booking.getRoom());
         archived.setExpectedArrival(booking.getExpectedArrival());
+        archived.setExpectedDeparture(booking.getExpectedDeparture());
+        archived.setCheckedOutAt(booking.getCheckedOutAt());
         archived.setState(BookingState.ARCHIVED);
         archived.setCreatedAt(booking.getCreatedAt());
         archived.setArchivedAt(OffsetDateTime.now());
         booking.setState(BookingState.ARCHIVED);
         bookingRepository.save(booking);
-        return BookingArchiveDto.fromEntity(archiveRepository.save(archived));
+        BookingArchiveDto result = BookingArchiveDto.fromEntity(archiveRepository.save(archived));
+        log.info("Archived booking id={}", bookingId);
+        return result;
     }
 }

@@ -42,6 +42,9 @@ public class BookingEntity {
     @Column(name = "expected_arrival")
     OffsetDateTime expectedArrival;
 
+    @Column(name = "expected_departure")
+    OffsetDateTime expectedDeparture;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "state")
@@ -49,4 +52,7 @@ public class BookingEntity {
 
     @Column(name = "created_at")
     OffsetDateTime createdAt;
+
+    @Column(name = "checked_out_at")
+    OffsetDateTime checkedOutAt;
 }

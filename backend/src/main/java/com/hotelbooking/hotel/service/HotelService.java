@@ -4,6 +4,7 @@ import com.hotelbooking.hotel.db.HotelEntity;
 import com.hotelbooking.hotel.db.HotelRepository;
 import com.hotelbooking.hotel.model.HotelDto;
 import com.hotelbooking.hotel.model.HotelRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @Service
+@Slf4j
 @Transactional(readOnly = true)
 public class HotelService {
     private final HotelRepository hotels;
@@ -30,14 +32,18 @@ public class HotelService {
     public HotelDto create(HotelRequest request) {
         HotelEntity hotel = new HotelEntity();
         apply(hotel, request);
-        return HotelDto.fromEntity(hotels.save(hotel));
+        HotelDto created = HotelDto.fromEntity(hotels.save(hotel));
+        log.info("Created hotel id={}", created.hotelId());
+        return created;
     }
 
     @Transactional
     public HotelDto update(Long id, HotelRequest request) {
         HotelEntity hotel = findHotel(id);
         apply(hotel, request);
-        return HotelDto.fromEntity(hotel);
+        HotelDto updated = HotelDto.fromEntity(hotel);
+        log.info("Updated hotel id={}", id);
+        return updated;
     }
 
     @Transactional
@@ -53,6 +59,7 @@ public class HotelService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "This hotel still has rooms or reviews.", exception);
         }
+        log.info("Deleted hotel id={}", id);
     }
 
     public HotelEntity findHotel(Long id) {

@@ -38,3 +38,7 @@ build/
 ### Frontend ###
 node_modules/
 frontend/test-results/
+
+### Local logs ###
+*.log
+port.txt

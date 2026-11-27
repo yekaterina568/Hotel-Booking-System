@@ -7,6 +7,7 @@ import com.hotelbooking.review.db.ReviewRepository;
 import com.hotelbooking.review.model.ReviewDto;
 import com.hotelbooking.review.model.ReviewRequest;
 import com.hotelbooking.review.model.ReviewStatus;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @Service
+@Slf4j
 @Transactional(readOnly = true)
 public class ReviewService {
     private final ReviewRepository reviews;
@@ -41,7 +43,9 @@ public class ReviewService {
         review.setRating(request.rating().shortValueExact());
         review.setComment(request.comment().strip());
         try {
-            return ReviewDto.fromEntity(reviews.saveAndFlush(review));
+            ReviewDto created = ReviewDto.fromEntity(reviews.saveAndFlush(review));
+            log.info("Created review id={}", created.reviewId());
+            return created;
         } catch (DataIntegrityViolationException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "The hotel is no longer available.", exception);
         }
@@ -51,12 +55,15 @@ public class ReviewService {
     public ReviewDto changeStatus(Long id, ReviewStatus status) {
         ReviewEntity review = findReview(id);
         review.setStatus(status);
-        return ReviewDto.fromEntity(review);
+        ReviewDto updated = ReviewDto.fromEntity(review);
+        log.info("Changed status for review id={} to {}", id, status);
+        return updated;
     }
 
     @Transactional
     public void delete(Long id) {
         reviews.delete(findReview(id));
+        log.info("Deleted review id={}", id);
     }
 
     private ReviewEntity findReview(Long id) {

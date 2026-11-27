@@ -5,9 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hotel PMS — Front-Desk Operations</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="auth.js" defer></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
-  <div class="app-layout">
+  <main id="loginPanel" class="auth-page">
+    <section class="panel auth-panel" aria-labelledby="loginHeading">
+      <h1 id="loginHeading">Sign in</h1>
+      <p class="panel-desc">Enter your system username and password to continue.</p>
+      <form id="frontDeskSignInForm">
+        <div class="field-group">
+          <label for="frontDeskUsername">Username</label>
+          <input id="frontDeskUsername" name="username" autocomplete="username" required>
+        </div>
+        <div class="field-group">
+          <label for="frontDeskPassword">Password</label>
+          <input id="frontDeskPassword" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Sign in</button>
+        <p id="frontDeskSignInFeedback" class="feedback-banner" role="status"></p>
+      </form>
+    </section>
+  </main>
+
+  <div class="app-layout" hidden>
     <!-- Left Navigation Sidebar -->
     <aside class="sidebar">
       <div class="brand">
@@ -36,6 +57,7 @@
     <div class="main-wrapper">
       <header class="topbar">
         <div id="pageTitle" class="page-title">Front-Desk Operations & Arrival Management</div>
+        <button id="frontDeskSignOut" class="btn btn-secondary" type="button">Sign out</button>
         <div class="system-status">
           <span class="status-dot"></span> System Online
         </div>
@@ -83,35 +105,49 @@
           <div class="panel-header">
             <div>
               <h2>Create a Booking</h2>
-              <p class="panel-desc">Enter the passport of a registered guest, choose a room, and set the expected arrival time.</p>
+              <p class="panel-desc">Enter the passport of a registered guest and the stay dates. Only rooms that are free for the whole stay are offered.</p>
             </div>
           </div>
 
           <div class="panel-body">
-            <form id="bookingForm" class="grid-form">
+            <form id="bookingForm" class="grid-form booking-form">
               <div class="field-group">
                 <label for="bookingGuestPassport">Guest Passport</label>
                 <input type="text" id="bookingGuestPassport" placeholder="Passport / ID number" maxlength="20" autocomplete="off" required />
               </div>
               <div class="field-group">
-                <label for="bookingRoomId">Room</label>
-                <select id="bookingRoomId" required>
-                  <option value="">Loading rooms...</option>
-                </select>
+                <label for="bookingExpectedArrival">Check-in (arrival)</label>
+                <input type="datetime-local" id="bookingExpectedArrival" required />
               </div>
               <div class="field-group">
-                <label for="bookingExpectedArrival">Expected Arrival</label>
-                <input type="datetime-local" id="bookingExpectedArrival" required />
+                <label for="bookingExpectedDeparture">Check-out (departure)</label>
+                <input type="datetime-local" id="bookingExpectedDeparture" required />
+              </div>
+              <div class="field-group">
+                <label for="bookingRoomType">Room type</label>
+                <select id="bookingRoomType">
+                  <option value="">Any type</option>
+                  <option value="SINGLE">Single</option>
+                  <option value="DOUBLE">Double</option>
+                  <option value="TWIN">Twin</option>
+                  <option value="TRIPLE">Triple</option>
+                  <option value="FAMILY">Family</option>
+                  <option value="SUITE">Suite</option>
+                  <option value="DELUXE">Deluxe</option>
+                  <option value="PRESIDENTIAL">Presidential</option>
+                </select>
+              </div>
+              <div class="field-group span-2">
+                <label for="bookingRoomId">Free room for these dates</label>
+                <select id="bookingRoomId" required>
+                  <option value="">Choose check-in and check-out dates first</option>
+                </select>
               </div>
               <div class="field-action">
                 <button type="submit" class="btn btn-primary">Create Booking</button>
               </div>
             </form>
             <div id="bookingMsg"></div>
-          </div>
-        </section>
-
-        <!-- Section 1: Passport Verification -->
         <section id="checkin-section" class="panel">
           <div class="panel-header">
             <div>
@@ -266,6 +302,5 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
 </body>
 </html>

@@ -10,8 +10,10 @@ public record BookingArchiveDto(
         Long guestId,
         Long roomId,
         OffsetDateTime expectedArrival,
+        OffsetDateTime expectedDeparture,
         BookingState state,
         OffsetDateTime createdAt,
+        OffsetDateTime checkedOutAt,
         OffsetDateTime archivedAt
 ) {
     public static BookingArchiveDto fromEntity(BookingArchiveEntity booking) {
@@ -20,8 +22,10 @@ public record BookingArchiveDto(
                 booking.getGuest() == null ? null : booking.getGuest().getGuestId(),
                 booking.getRoom() == null ? null : booking.getRoom().getRoomId(),
                 booking.getExpectedArrival(),
+                booking.getExpectedDeparture(),
                 booking.getState(),
                 booking.getCreatedAt(),
+                booking.getCheckedOutAt(),
                 booking.getArchivedAt()
         );
     }

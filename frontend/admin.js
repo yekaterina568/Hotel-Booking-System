@@ -24,6 +24,7 @@ function displayAmount(amount) {
 function displayStatus(status) {
   if (status == null) return '—';
   if (status === 'CHECKEDIN') return 'Checked in';
+  if (status === 'CHECKEDOUT') return 'Checked out';
   return status.charAt(0) + status.slice(1).toLowerCase();
 }
 
@@ -37,6 +38,9 @@ const bookingColumns = [
   ['Room ID', 'roomId', displayId],
   ['Status', 'state', displayStatus],
   ['Expected arrival', 'expectedArrival', displayDateTime],
+  ['Expected departure', 'expectedDeparture', displayDateTime],
+  ['Total', 'totalPrice', displayAmount],
+  ['Checked out', 'checkedOutAt', displayDateTime],
   ['Created', 'createdAt', displayDateTime]
 ];
 
@@ -112,7 +116,7 @@ const addRecord = element('addRecord');
 const refreshData = element('refreshData');
 const signOut = element('signOut');
 
-let token = '';
+let credentials = hotelAuth.getCredentials();
 let hotels = [];
 let reviews = [];
 let busy = false;
@@ -123,17 +127,17 @@ let operationPage = 1;
 let operationLoadId = 0;
 const operationPageSize = 25;
 
-async function request(path, { method = 'GET', body } = {}, accessToken = token) {
-  const headers = { Authorization: `Bearer ${accessToken}` };
+async function request(path, { method = 'GET', body } = {}, accessCredentials = credentials) {
+  const headers = {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
   let response;
   try {
-    response = await fetch(`${ADMIN_API}${path}`, {
+    response = await hotelAuth.fetch(`${ADMIN_API}${path}`, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body)
-    });
+    }, accessCredentials);
   } catch {
     throw new Error('Could not reach the backend. Check that it is running and try again.');
   }
@@ -142,8 +146,7 @@ async function request(path, { method = 'GET', body } = {}, accessToken = token)
 
   const problem = await response.json().catch(() => null);
   const message = {
-    401: 'The admin access token is invalid.',
-    503: 'Set HOTEL_ADMIN_TOKEN on the backend and restart it to enable administration.'
+    401: 'The username or password is incorrect.'
   }[response.status] ?? problem?.detail ?? `Request failed (${response.status}). Try again.`;
   throw Object.assign(new Error(message), { status: response.status });
 }
@@ -161,7 +164,8 @@ function showSignedIn(signedIn) {
 }
 
 function clearSession(message = '') {
-  token = '';
+  credentials = null;
+  hotelAuth.clearCredentials();
   hotels = [];
   reviews = [];
   operationLoadId++;
@@ -181,37 +185,42 @@ function clearSession(message = '') {
   showSignedIn(false);
   showFeedback(dashboardFeedback);
   showFeedback(signInFeedback, message, message ? 'error' : '');
-  element('adminToken').focus();
+  element('adminUsername').focus();
 }
 
-async function loadRecords(accessToken) {
+async function loadRecords(accessCredentials) {
   [hotels, reviews] = await Promise.all([
-    request('/hotels', {}, accessToken),
-    request('/reviews', {}, accessToken)
+    request('/hotels', {}, accessCredentials),
+    request('/reviews', {}, accessCredentials)
   ]);
 }
 
 signInForm.addEventListener('submit', async event => {
   event.preventDefault();
-  const tokenInput = element('adminToken');
+  const usernameInput = element('adminUsername');
+  const passwordInput = element('adminPassword');
   const submit = signInForm.querySelector('button[type="submit"]');
   if (submit.disabled) return;
 
   submit.disabled = true;
+  submit.textContent = 'Signing in…';
   showFeedback(signInFeedback);
   try {
-    const candidate = tokenInput.value.trim();
+    const candidate = { username: usernameInput.value.trim(), password: passwordInput.value };
+    await hotelAuth.authenticate(candidate.username, candidate.password);
     await loadRecords(candidate);
-    token = candidate;
+    credentials = candidate;
+    hotelAuth.setCredentials(candidate);
     signInForm.reset();
     showSignedIn(true);
     showSection(true);
     render();
   } catch (error) {
     showFeedback(signInFeedback, error.message, 'error');
-    tokenInput.focus();
+    usernameInput.focus();
   } finally {
     submit.disabled = false;
+    submit.textContent = 'Sign in';
   }
 });
 
@@ -246,7 +255,7 @@ function showSection(moveFocus = false) {
 }
 
 window.addEventListener('hashchange', () => {
-  if (token) {
+  if (credentials) {
     showFeedback(dashboardFeedback);
     showSection(true);
   }
@@ -283,16 +292,16 @@ refreshData.addEventListener('click', async () => {
   const section = currentSection();
   if (operationTables[section]) {
     await loadOperationRecords(section);
-    if (token && section === currentSection()) refreshData.focus();
+    if (credentials && section === currentSection()) refreshData.focus();
     return;
   }
 
-  const updated = await perform(() => loadRecords(token), dashboardFeedback);
+  const updated = await perform(() => loadRecords(credentials), dashboardFeedback);
   if (updated) {
     render();
     showFeedback(dashboardFeedback, 'Lists refreshed.', 'success');
   }
-  if (token) refreshData.focus();
+  if (credentials) refreshData.focus();
 });
 
 function makeButton(label, className, handler) {
@@ -387,7 +396,7 @@ function showOperationMessage(table, message) {
 async function loadOperationRecords(section) {
   const table = operationTables[section];
   const loadId = ++operationLoadId;
-  const isCurrent = () => loadId === operationLoadId && section === currentSection() && Boolean(token);
+  const isCurrent = () => loadId === operationLoadId && section === currentSection() && Boolean(credentials);
   showOperationMessage(table, 'Loading records…');
 
   try {
@@ -511,7 +520,7 @@ function reviewStatusControl(review) {
     } else {
       select.value = review.status;
     }
-    if (token) {
+    if (credentials) {
       const control = element('reviewRows').querySelector(`[data-review-id="${review.reviewId}"]`);
       (control ?? element('statusFilter')).focus();
     }
@@ -675,3 +684,22 @@ handleDialogSubmit(deleteForm, async () => {
   reviews = reviews.filter(review => review.reviewId !== id);
   return 'Review deleted.';
 });
+
+window.addEventListener('hotel-auth-required', () => clearSession('Sign in again to continue.'));
+
+async function restoreSession() {
+  if (!credentials) {
+    showSignedIn(false);
+    return;
+  }
+  try {
+    await loadRecords(credentials);
+    showSignedIn(true);
+    showSection();
+    render();
+  } catch (error) {
+    clearSession(error.message);
+  }
+}
+
+restoreSession();

@@ -6,6 +6,7 @@
   <title>Hotel PMS — Administration</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="admin.css">
+  <script src="auth.js" defer></script>
   <script src="admin.js" defer></script>
 </head>
 <body class="admin-page">
@@ -44,8 +45,12 @@
           <h1 id="signInHeading">Admin sign-in</h1>
           <form id="signInForm">
             <div class="field-group">
-              <label for="adminToken">Admin access token</label>
-              <input type="password" id="adminToken" autocomplete="off" required>
+              <label for="adminUsername">Username</label>
+              <input id="adminUsername" autocomplete="username" required>
+            </div>
+            <div class="field-group">
+              <label for="adminPassword">Password</label>
+              <input type="password" id="adminPassword" autocomplete="current-password" required>
             </div>
             <button type="submit" class="btn btn-primary">Sign in</button>
             <p id="signInFeedback" class="feedback-banner" role="status"></p>

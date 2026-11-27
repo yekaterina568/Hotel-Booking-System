@@ -128,26 +128,78 @@ if (registrationForm) {
 // 2. Загрузка списка комнат для формы создания бронирования
 async function loadBookingOptions() {
   const select = document.getElementById('bookingRoomId');
+  const arrival = document.getElementById('bookingExpectedArrival').value;
+  const departure = document.getElementById('bookingExpectedDeparture').value;
+  const roomType = document.getElementById('bookingRoomType').value;
   if (!select) return;
 
+  availableRooms = [];
+  updateBookingSummary();
+
+  if (!arrival || !departure) {
+    select.innerHTML = '<option value="">Choose check-in and check-out dates first</option>';
+    return;
+  }
+  if (new Date(departure) <= new Date(arrival)) {
+    select.innerHTML = '<option value="">Check-out must be after check-in</option>';
+    return;
+  }
+
+  select.innerHTML = '<option value="">Searching free rooms...</option>';
+  const params = new URLSearchParams({ from: toIsoWithZone(arrival), to: toIsoWithZone(departure) });
+  if (roomType) params.append('roomType', roomType);
+
   try {
-    const response = await fetch(`${API_BASE_URL}/rooms`);
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/rooms/available?${params}`);
     if (response.ok) {
-      const rooms = await response.json();
-      select.innerHTML = '<option value="">Select a room...</option>';
-      rooms.forEach(room => {
+      availableRooms = await response.json();
+      if (availableRooms.length === 0) {
+        select.innerHTML = '<option value="">No free rooms for these dates</option>';
+        return;
+      }
+      select.innerHTML = `<option value="">${availableRooms.length} free room(s) — select one...</option>`;
+      availableRooms.forEach(room => {
         const option = document.createElement('option');
         option.value = room.roomId;
-        option.textContent = `Room ${room.roomNumber} (${room.roomType || 'Standard'} — ${room.cleaningState})`;
+        const price = room.pricePerNight == null ? '' : ` · ${moneyFormat.format(room.pricePerNight)}/night`;
+        option.textContent = `Room ${room.roomNumber} (${room.roomType || 'Standard'})${price}`;
         select.appendChild(option);
       });
       return;
     }
   } catch (err) {
-    console.warn('Could not load rooms:', err);
+    console.warn('Could not load free rooms:', err);
   }
-  select.innerHTML = '<option value="">No rooms available</option>';
+  select.innerHTML = '<option value="">Could not load rooms — is the backend running?</option>';
 }
+
+// Подсказка под формой: сколько ночей и сколько это будет стоить
+function updateBookingSummary() {
+  const summary = document.getElementById('bookingSummary');
+  if (!summary) return;
+  const arrival = document.getElementById('bookingExpectedArrival').value;
+  const departure = document.getElementById('bookingExpectedDeparture').value;
+  const roomId = Number(document.getElementById('bookingRoomId').value);
+  const room = availableRooms.find(r => r.roomId === roomId);
+
+  if (!arrival || !departure || new Date(departure) <= new Date(arrival)) {
+    summary.textContent = '';
+    return;
+  }
+  const nights = countNights(arrival, departure);
+  if (room && room.pricePerNight != null) {
+    summary.textContent = `${nights} night(s) × ${moneyFormat.format(room.pricePerNight)} = ${moneyFormat.format(nights * room.pricePerNight)}`;
+  } else {
+    summary.textContent = `${nights} night(s)`;
+  }
+}
+
+['bookingExpectedArrival', 'bookingExpectedDeparture', 'bookingRoomType'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', loadAvailableRooms);
+});
+const bookingRoomSelect = document.getElementById('bookingRoomId');
+if (bookingRoomSelect) bookingRoomSelect.addEventListener('change', updateBookingSummary);
 
 // Обработчик создания новой брони (New Booking)
 const bookingForm = document.getElementById('bookingForm');
@@ -156,11 +208,18 @@ if (bookingForm) {
     e.preventDefault();
     const passport = document.getElementById('bookingGuestPassport').value.trim().toUpperCase();
     const roomId = Number(document.getElementById('bookingRoomId').value);
-    const expectedArrival = document.getElementById('bookingExpectedArrival').value;
+    const arrival = document.getElementById('bookingExpectedArrival').value;
+    const departure = document.getElementById('bookingExpectedDeparture').value;
     const bookingMsg = document.getElementById('bookingMsg');
 
+    if (new Date(departure) <= new Date(arrival)) {
+      bookingMsg.textContent = '❌ Check-out must be after check-in.';
+      bookingMsg.className = 'feedback-banner error';
+      return;
+    }
+
     try {
-      const guestsRes = await fetch(`${API_BASE_URL}/guests`);
+      const guestsRes = await hotelAuth.fetch(`${API_BASE_URL}/guests`);
       const guests = guestsRes.ok ? await guestsRes.json() : [];
       const guest = guests.find(g => g.passportNum === passport);
 
@@ -170,30 +229,40 @@ if (bookingForm) {
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/bookings`, {
+      const response = await hotelAuth.fetch(`${API_BASE_URL}/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          guestId: guest.guestId,
-          roomId: roomId,
-          expectedArrival: expectedArrival,
-          state: 'CONFIRMED'
+          guest: { guestId: guest.guestId },
+          room: { roomId: roomId },
+          expectedArrival: toIsoWithZone(arrival),
+          expectedDeparture: toIsoWithZone(departure)
         })
       });
 
       if (response.ok) {
-        bookingMsg.textContent = `✓ Booking created for ${guest.firstName} ${guest.lastName}!`;
-        bookingMsg.className = 'msg success';
+        const booking = await response.json();
+        const room = availableRooms.find(r => r.roomId === roomId);
+        const nights = booking.nights ?? countNights(arrival, departure);
+        bookingMsg.textContent = `✓ Booking #${booking.bookingId} created for ${guest.firstName} ${guest.lastName}: ` +
+          `Room ${room ? room.roomNumber : roomId}, ${nights} night(s).`;
+        bookingMsg.className = 'feedback-banner success';
         bookingForm.reset();
+        loadAvailableRooms();
         loadPriorityQueue();
         return;
       }
+
+      bookingMsg.textContent = `❌ ${await readError(response, 'Failed to create booking.')}`;
+      bookingMsg.className = 'feedback-banner error';
+      if (response.status === 409) loadAvailableRooms();
+      return;
     } catch (err) {
       console.warn('Booking error:', err);
     }
 
     bookingMsg.textContent = '❌ Failed to create booking. Check backend connection.';
-    bookingMsg.className = 'msg error';
+    bookingMsg.className = 'feedback-banner error';
   });
 }
 
@@ -204,9 +273,9 @@ async function loadPriorityQueue() {
 
   try {
     const [bookingsResponse, roomsResponse, guestsResponse] = await Promise.all([
-      fetch(`${API_BASE_URL}/bookings`),
-      fetch(`${API_BASE_URL}/rooms`),
-      fetch(`${API_BASE_URL}/guests`)
+      hotelAuth.fetch(`${API_BASE_URL}/bookings`),
+      hotelAuth.fetch(`${API_BASE_URL}/rooms`),
+      hotelAuth.fetch(`${API_BASE_URL}/guests`)
     ]);
 
     if (bookingsResponse.ok && roomsResponse.ok && guestsResponse.ok) {
@@ -266,7 +335,7 @@ async function loadPriorityQueue() {
 // 4. Автоматическое заселение
 async function autoAssign(bookingId, roomNumber) {
   try {
-    const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/check-in`, {
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/bookings/${bookingId}/check-in`, {
       method: 'POST'
     });
 
@@ -289,23 +358,23 @@ document.getElementById('validateBtn').addEventListener('click', async () => {
 
   if (!passportRegex.test(passportVal)) {
     msg.textContent = '❌ Error: Invalid passport format. Expected 7 to 12 alphanumeric characters.';
-    msg.className = 'msg error';
+    msg.className = 'feedback-banner error';
     return;
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/guests`);
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/guests`);
     if (response.ok) {
       const guests = await response.json();
       const guest = guests.find(item => item.passportNum === passportVal);
       if (!guest) {
         msg.textContent = `❌ Passport ${passportVal} was not found in the database.`;
-        msg.className = 'msg error';
+        msg.className = 'feedback-banner error';
         return;
       }
 
       msg.textContent = `✓ Verified in DB: Guest ${guest.firstName} ${guest.lastName} (Passport: ${passportVal})`;
-      msg.className = 'msg success';
+      msg.className = 'feedback-banner success';
       return;
     }
   } catch (err) {
@@ -322,7 +391,7 @@ async function loadRefunds() {
   tbody.innerHTML = '';
 
   try {
-    const response = await fetch(`${API_BASE_URL}/refunds`);
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/refunds`);
     if (response.ok) {
       const refundsData = await response.json();
 
@@ -383,7 +452,7 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
   };
 
   try {
-    const response = await fetch(`${API_BASE_URL}/refunds`, {
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/refunds`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -391,7 +460,7 @@ document.getElementById('refundForm').addEventListener('submit', async (e) => {
 
     if (response.ok) {
       refundMsg.textContent = `✓ Refund of $${amount.toFixed(2)} for Booking #${bookingId} saved to Database!`;
-      refundMsg.className = 'msg success';
+      refundMsg.className = 'feedback-banner success';
       document.getElementById('refundForm').reset();
       loadRefunds();
     } else {
@@ -415,13 +484,13 @@ async function cancelRefund(refundId) {
 
   const refundMsg = document.getElementById('refundMsg');
   try {
-    const response = await fetch(`${API_BASE_URL}/refunds/${refundId}`, {
+    const response = await hotelAuth.fetch(`${API_BASE_URL}/refunds/${refundId}`, {
       method: 'DELETE'
     });
 
     if (response.ok) {
       refundMsg.textContent = `✓ Refund #${refundId} cancelled and removed from Database!`;
-      refundMsg.className = 'msg success';
+      refundMsg.className = 'feedback-banner success';
       loadRefunds();
       return;
     }
